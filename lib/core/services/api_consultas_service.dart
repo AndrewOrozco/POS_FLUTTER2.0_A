@@ -1,0 +1,1079 @@
+/// Servicio para conectarse al backend de consultas (FastAPI).
+///
+/// Usa las mismas funciones SQL que la UI de Java:
+/// - fnc_consultar_ventas_pendientes
+/// - fnc_consultar_ventas
+/// - fnc_actualizar_medios_de_pagos
+/// - fnc_validar_botones_ventas_appterpel
+library;
+
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+// Re-exportar modelos para que todos los que importan api_consultas_service
+// sigan teniendo acceso a los modelos sin cambiar sus imports.
+export '../models/api_models.dart';
+
+import '../models/api_models.dart';
+
+/// Servicio para el API de consultas (FastAPI)
+class ApiConsultasService {
+  static const String _host = '127.0.0.1';
+  static const int _port = 8020;
+  
+  String get _baseUrl => 'http://$_host:$_port';
+
+  // ============================================================
+  // VENTAS
+  // ============================================================
+
+  /// Obtener ventas sin resolver (fnc_consultar_ventas_pendientes)
+  Future<VentasResponse<VentaSinResolver>> getVentasSinResolver({
+    int? jornadaId,
+    int promotorId = 0,
+    int limite = 20,
+    int pagina = 1,
+  }) async {
+    try {
+      var url = '$_baseUrl/ventas/sin-resolver?promotor_id=$promotorId&limite=$limite&pagina=$pagina';
+      if (jornadaId != null) url += '&jornada_id=$jornadaId';
+      
+      final uri = Uri.parse(url);
+      print('[ApiConsultas] GET $uri');
+      
+      final response = await http.get(uri).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final ventasJson = data['ventas'] as List<dynamic>;
+        
+        print('[ApiConsultas] Ventas sin resolver: ${data['total']} (página ${data['pagina']}/${data['total_paginas']})');
+        
+        return VentasResponse<VentaSinResolver>(
+          total: parseInt(data['total']),
+          pagina: parseInt(data['pagina']),
+          porPagina: parseInt(data['por_pagina']),
+          totalPaginas: parseInt(data['total_paginas']),
+          jornadaId: parseIntNullable(data['jornada_id']),
+          ventas: ventasJson.map((v) => VentaSinResolver.fromJson(v)).toList(),
+        );
+      } else {
+        print('[ApiConsultas] Error ${response.statusCode}: ${response.body}');
+        return VentasResponse(total: 0, pagina: 1, porPagina: limite, totalPaginas: 1, ventas: []);
+      }
+    } catch (e) {
+      print('[ApiConsultas] Error en getVentasSinResolver: $e');
+      return VentasResponse(total: 0, pagina: 1, porPagina: limite, totalPaginas: 1, ventas: []);
+    }
+  }
+
+  /// Obtener historial de ventas (fnc_consultar_ventas)
+  Future<VentasResponse<VentaHistorial>> getHistorialVentas({
+    int? jornadaId,
+    int promotorId = 0,
+    int limite = 20,
+    int pagina = 1,
+  }) async {
+    try {
+      var url = '$_baseUrl/ventas/historial?promotor_id=$promotorId&limite=$limite&pagina=$pagina';
+      if (jornadaId != null) url += '&jornada_id=$jornadaId';
+      
+      final uri = Uri.parse(url);
+      print('[ApiConsultas] GET $uri');
+      
+      final response = await http.get(uri).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final ventasJson = data['ventas'] as List<dynamic>;
+        
+        print('[ApiConsultas] Historial ventas: ${data['total']} (página ${data['pagina']}/${data['total_paginas']})');
+        
+        return VentasResponse<VentaHistorial>(
+          total: parseInt(data['total']),
+          pagina: parseInt(data['pagina']),
+          porPagina: parseInt(data['por_pagina']),
+          totalPaginas: parseInt(data['total_paginas']),
+          jornadaId: parseIntNullable(data['jornada_id']),
+          ventas: ventasJson.map((v) => VentaHistorial.fromJson(v)).toList(),
+        );
+      } else {
+        print('[ApiConsultas] Error ${response.statusCode}: ${response.body}');
+        return VentasResponse(total: 0, pagina: 1, porPagina: limite, totalPaginas: 1, ventas: []);
+      }
+    } catch (e) {
+      print('[ApiConsultas] Error en getHistorialVentas: $e');
+      return VentasResponse(total: 0, pagina: 1, porPagina: limite, totalPaginas: 1, ventas: []);
+    }
+  }
+
+  /// Verificar salud del servicio
+  Future<bool> checkHealth() async {
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/health')).timeout(const Duration(seconds: 5));
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ============================================================
+  // CLIENTES Y TIPOS DE IDENTIFICACIÓN
+  // ============================================================
+  
+  /// Obtener tipos de identificación disponibles
+  Future<List<TipoIdentificacion>> getTiposIdentificacion() async {
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/ventas/tipos-identificacion')).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final tiposJson = data['tipos'] as List<dynamic>;
+        return tiposJson.map((t) => TipoIdentificacion.fromJson(t)).toList();
+      }
+      return _tiposPredeterminados();
+    } catch (e) {
+      print('[ApiConsultas] Error getTiposIdentificacion: $e');
+      return _tiposPredeterminados();
+    }
+  }
+  
+  List<TipoIdentificacion> _tiposPredeterminados() {
+    return [
+      TipoIdentificacion(nombre: 'Cedula de ciudadania', codigo: 13, aplicaFidelizacion: true, caracteresPermitidos: '0123456789', limiteCaracteres: 10),
+      TipoIdentificacion(nombre: 'NIT', codigo: 31, aplicaFidelizacion: true, caracteresPermitidos: '0123456789', limiteCaracteres: 15),
+      TipoIdentificacion(nombre: 'Cedula de extranjeria', codigo: 22, aplicaFidelizacion: true, caracteresPermitidos: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', limiteCaracteres: 15),
+      TipoIdentificacion(nombre: 'Consumidor final', codigo: 42, aplicaFidelizacion: false, caracteresPermitidos: '0123456789', limiteCaracteres: 12),
+    ];
+  }
+  
+  /// Consultar cliente por identificación
+  Future<ClienteConsulta> consultarCliente(String identificacion, {int tipoDocumento = 13}) async {
+    try {
+      final url = '$_baseUrl/ventas/consultar-cliente?identificacion=$identificacion&tipo_documento=$tipoDocumento';
+      print('[ApiConsultas] GET $url');
+      
+      final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        print('[ApiConsultas] Respuesta cliente: $data');
+        return ClienteConsulta.fromJson(data);
+      }
+      print('[ApiConsultas] Error HTTP ${response.statusCode}');
+      return ClienteConsulta.consumidorFinal(identificacion);
+    } catch (e) {
+      print('[ApiConsultas] Error consultarCliente: $e');
+      return ClienteConsulta.consumidorFinal(identificacion);
+    }
+  }
+
+  // ============================================================
+  // DATOS FACTURA (ventas_curso) - Status Pump
+  // ============================================================
+  
+  /// Guardar datos de factura en ventas_curso (venta activa en bomba).
+  /// Replica el flujo de Java SurtidorDao.generarDatosSurtidorVentasCurso.
+  /// Guarda: DatosFactura + factura_electronica + statusPump.
+  Future<ActualizarDatosVentaResponse> guardarDatosFacturaVentasCurso({
+    required int cara,
+    Map<String, dynamic>? facturaElectronica,
+    int? tipoDocumento,
+    String? identificacionCliente,
+    String? nombreCliente,
+    String? placa,
+    String? odometro,
+    bool fidelizar = false,
+    bool facturacionElectronica = false,
+  }) async {
+    try {
+      final body = {
+        'cara': cara,
+        if (facturaElectronica != null) 'factura_electronica': facturaElectronica,
+        if (tipoDocumento != null) 'tipo_documento': tipoDocumento,
+        if (identificacionCliente != null) 'identificacion_cliente': identificacionCliente,
+        if (nombreCliente != null) 'nombre_cliente': nombreCliente,
+        if (placa != null) 'placa': placa,
+        if (odometro != null) 'odometro': odometro,
+        'fidelizar': fidelizar,
+        'facturacion_electronica': facturacionElectronica,
+      };
+      
+      print('[ApiConsultas] POST guardar-datos-factura-ventas-curso: cara=$cara, '
+          'cliente=$nombreCliente, FE=$facturacionElectronica');
+      
+      final response = await http.post(
+        Uri.parse('$_baseUrl/ventas/guardar-datos-factura-ventas-curso'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 15));
+      
+      print('[ApiConsultas] Response ${response.statusCode}: ${response.body}');
+      final data = json.decode(response.body);
+      
+      return ActualizarDatosVentaResponse(
+        success: data['success'] == true,
+        message: data['message'] ?? '',
+        movimientoId: null,
+      );
+    } catch (e) {
+      print('[ApiConsultas] Error guardarDatosFacturaVentasCurso: $e');
+      return ActualizarDatosVentaResponse(
+        success: false,
+        message: 'Error de conexión: $e',
+        movimientoId: null,
+      );
+    }
+  }
+  
+  // ============================================================
+  // MEDIOS DE PAGO
+  // ============================================================
+  
+  /// Obtener medios de pago ya asignados a una venta
+  Future<List<MedioPagoVentaConsulta>> getMediosPagoVenta(int movimientoId) async {
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/ventas/medios-pago-venta/$movimientoId')).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final mediosJson = data['medios'] as List<dynamic>;
+        print('[ApiConsultas] Medios de venta $movimientoId: ${mediosJson.length}');
+        return mediosJson.map((m) => MedioPagoVentaConsulta.fromJson(m)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('[ApiConsultas] Error getMediosPagoVenta: $e');
+      return [];
+    }
+  }
+  
+  /// Actualizar datos de una venta (placa, cliente, etc.)
+  Future<ActualizarDatosVentaResponse> actualizarDatosVenta({
+    required int movimientoId,
+    String? placa,
+    int? odometro,
+    String? nombreCliente,
+    String? identificacionCliente,
+    int? tipoDocumento,
+    String? orden,
+    bool? esCredito,
+  }) async {
+    try {
+      final body = {
+        'movimiento_id': movimientoId,
+        if (placa != null && placa.isNotEmpty) 'placa': placa.toUpperCase(),
+        if (odometro != null) 'odometro': odometro,
+        if (nombreCliente != null && nombreCliente.isNotEmpty) 'nombre_cliente': nombreCliente,
+        if (identificacionCliente != null && identificacionCliente.isNotEmpty) 'identificacion_cliente': identificacionCliente,
+        if (tipoDocumento != null) 'tipo_documento': tipoDocumento,
+        if (orden != null && orden.isNotEmpty) 'orden': orden,
+        if (esCredito != null) 'es_credito': esCredito,
+      };
+      
+      print('[ApiConsultas] POST actualizar-datos-venta: $body');
+      
+      final response = await http.post(
+        Uri.parse('$_baseUrl/ventas/actualizar-datos-venta'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 15));
+      
+      print('[ApiConsultas] Response ${response.statusCode}: ${response.body}');
+      final data = json.decode(response.body);
+      
+      return ActualizarDatosVentaResponse(success: data['success'] == true, message: data['message'] ?? '', movimientoId: data['movimiento_id']);
+    } catch (e) {
+      print('[ApiConsultas] Error actualizarDatosVenta: $e');
+      return ActualizarDatosVentaResponse(success: false, message: 'Error de conexión: $e', movimientoId: movimientoId);
+    }
+  }
+  
+  /// Actualizar medios de pago (fnc_actualizar_medios_de_pagos)
+  Future<ActualizarMediosPagoResponse> actualizarMediosPago({
+    required int movimientoId,
+    required List<MedioPagoParaGuardar> mediosPagos,
+    String? identificadorEquipo,
+  }) async {
+    try {
+      final body = {
+        'movimiento_id': movimientoId,
+        'medios_pagos': mediosPagos.map((m) => m.toJson()).toList(),
+        if (identificadorEquipo != null) 'identificador_equipo': identificadorEquipo,
+      };
+      
+      print('[ApiConsultas] POST actualizar-medios-pago: $body');
+      
+      final response = await http.post(
+        Uri.parse('$_baseUrl/ventas/actualizar-medios-pago'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 15));
+      
+      print('[ApiConsultas] Response ${response.statusCode}: ${response.body}');
+      final data = json.decode(response.body);
+      
+      return ActualizarMediosPagoResponse(success: data['success'] == true, message: data['message'] ?? '', movimientoId: data['movimiento_id']);
+    } catch (e) {
+      print('[ApiConsultas] Error actualizarMediosPago: $e');
+      return ActualizarMediosPagoResponse(success: false, message: 'Error de conexión: $e', movimientoId: movimientoId);
+    }
+  }
+  
+  /// Obtener medios de pago disponibles
+  /// [traerEfectivo] = true para Status Pump, false para Ventas Sin Resolver
+  Future<List<MedioPagoConsulta>> getMediosPago({bool traerEfectivo = true}) async {
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/ventas/medios-pago?traer_efectivo=$traerEfectivo')).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final mediosJson = data['medios'] as List<dynamic>;
+        return mediosJson.map((m) => MedioPagoConsulta.fromJson(m)).toList();
+      }
+      return [MedioPagoConsulta(id: 1, codigo: '01', nombre: 'EFECTIVO', codigoDian: 10, requiereVoucher: false)];
+    } catch (e) {
+      print('[ApiConsultas] Error getMediosPago: $e');
+      return [MedioPagoConsulta(id: 1, codigo: '01', nombre: 'EFECTIVO', codigoDian: 10, requiereVoucher: false)];
+    }
+  }
+
+  // ============================================================
+  // APP TERPEL
+  // ============================================================
+  
+  /// Asignar APP TERPEL a una venta sin resolver SIN gestionarla.
+  /// Java: guardarMedioAppTerpel() + estado=4 (pendiente).
+  /// NO llama fnc_actualizar_medios_de_pagos. La venta sigue en "sin resolver".
+  Future<AppTerpelPagoResponse> asignarAppTerpelVenta({
+    required int movimientoId,
+    int medioPagoId = 106,
+    String medioDescripcion = 'APP TERPEL',
+    double valorTotal = 0,
+  }) async {
+    try {
+      final body = {
+        'movimiento_id': movimientoId,
+        'medio_pago_id': medioPagoId,
+        'medio_descripcion': medioDescripcion,
+        'valor_total': valorTotal,
+      };
+      
+      print('[ApiConsultas] POST appterpel/asignar: $body');
+      
+      final response = await http.post(
+        Uri.parse('$_baseUrl/ventas/appterpel/asignar'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 15));
+      
+      print('[ApiConsultas] AppTerpel Asignar Response ${response.statusCode}: ${response.body}');
+      final data = json.decode(response.body);
+      
+      return AppTerpelPagoResponse(
+        success: data['success'] == true,
+        message: data['message']?.toString() ?? '',
+        movimientoId: data['movimiento_id'] != null ? parseInt(data['movimiento_id']) : movimientoId,
+      );
+    } catch (e) {
+      print('[ApiConsultas] Error asignarAppTerpelVenta: $e');
+      return AppTerpelPagoResponse(
+        success: false,
+        message: 'Error de conexión: $e',
+        movimientoId: movimientoId,
+      );
+    }
+  }
+  
+  /// Consultar estado del pago APP TERPEL (fnc_validar_botones_ventas_appterpel)
+  Future<AppTerpelEstado> getAppTerpelEstado(int movimientoId) async {
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/ventas/appterpel-estado/$movimientoId')).timeout(const Duration(seconds: 10));
+      final data = json.decode(response.body);
+      return AppTerpelEstado(pagoEnProceso: data['pago_en_proceso'] == true, puedeGestionar: data['puede_gestionar'] == true);
+    } catch (e) {
+      print('[ApiConsultas] Error getAppTerpelEstado: $e');
+      return AppTerpelEstado(pagoEnProceso: false, puedeGestionar: true);
+    }
+  }
+  
+  /// Enviar pago APP TERPEL al orquestador (puerto 5555)
+  /// Java: EnviandoMedioPago.java → POST http://localhost:5555/v1/payments/
+  Future<AppTerpelPagoResponse> enviarPagoAppTerpel({
+    required int movimientoId,
+    String medioDescripcion = 'APP TERPEL',
+  }) async {
+    try {
+      final body = {
+        'movimiento_id': movimientoId,
+        'medio_descripcion': medioDescripcion,
+      };
+      
+      print('[ApiConsultas] POST appterpel/enviar-pago: $body');
+      
+      final response = await http.post(
+        Uri.parse('$_baseUrl/ventas/appterpel/enviar-pago'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 35));
+      
+      print('[ApiConsultas] AppTerpel Response ${response.statusCode}: ${response.body}');
+      final data = json.decode(response.body);
+      
+      return AppTerpelPagoResponse.fromJson(data);
+    } catch (e) {
+      print('[ApiConsultas] Error enviarPagoAppTerpel: $e');
+      return AppTerpelPagoResponse(
+        success: false,
+        message: 'Error de conexión con el orquestador: $e',
+        movimientoId: movimientoId,
+      );
+    }
+  }
+  
+  /// Obtener tiempo configurado para mensaje APP TERPEL (default 30s)
+  Future<int> getTiempoMensajeAppTerpel() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/ventas/appterpel/tiempo-mensaje'),
+      ).timeout(const Duration(seconds: 10));
+      
+      final data = json.decode(response.body);
+      return data['tiempo_segundos'] ?? 30;
+    } catch (e) {
+      print('[ApiConsultas] Error getTiempoMensajeAppTerpel: $e');
+      return 30; // Default como en Java
+    }
+  }
+
+  // ============================================================
+  // VENTAS EN CURSO (Status Pump)
+  // ============================================================
+  
+  /// Guardar medio de pago en ventas_curso (flujo Status Pump)
+  Future<GuardarMedioVentaCursoResponse> guardarMedioVentaCurso({
+    required int cara,
+    required int medioPagoId,
+    String descripcion = '',
+    String? placa,
+    String? numeroComprobante,
+    bool esGopass = false,
+    bool esAppTerpel = false,
+  }) async {
+    try {
+      final body = {
+        'cara': cara,
+        'medio_pago_id': medioPagoId,
+        'medio_pago_descripcion': descripcion,
+        'placa': placa ?? '',
+        'numero_comprobante': numeroComprobante ?? '',
+        'es_gopass': esGopass,
+        'es_app_terpel': esAppTerpel,
+      };
+      
+      print('[ApiConsultas] POST guardar-medio-ventas-curso: $body');
+      
+      final response = await http.post(
+        Uri.parse('$_baseUrl/ventas/guardar-medio-ventas-curso'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 15));
+      
+      print('[ApiConsultas] Response ${response.statusCode}: ${response.body}');
+      final data = json.decode(response.body);
+      
+      return GuardarMedioVentaCursoResponse(success: data['success'] == true, message: data['message'] ?? '');
+    } catch (e) {
+      print('[ApiConsultas] Error guardarMedioVentaCurso: $e');
+      return GuardarMedioVentaCursoResponse(success: false, message: 'Error de conexión: $e');
+    }
+  }
+  
+  /// Limpiar flag isAppTerpel de ventas_curso para una cara.
+  /// Se llama después de que la venta APP TERPEL termina de despachar,
+  /// para evitar que la siguiente venta herede el flag.
+  Future<bool> limpiarAppTerpelVentasCurso(int cara) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/ventas/limpiar-appterpel-ventas-curso'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'cara': cara}),
+      ).timeout(const Duration(seconds: 10));
+      
+      final data = json.decode(response.body);
+      print('[ApiConsultas] limpiarAppTerpel cara $cara: ${data['message']}');
+      return data['success'] == true;
+    } catch (e) {
+      print('[ApiConsultas] Error limpiarAppTerpelVentasCurso: $e');
+      return false;
+    }
+  }
+
+  /// Obtener venta activa por cara (resolver movimiento_id real)
+  Future<VentaActivaCara> getVentaActivaPorCara(int cara) async {
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/ventas/venta-activa-cara/$cara')).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return VentaActivaCara.fromJson(data);
+      }
+      return VentaActivaCara(found: false, cara: cara);
+    } catch (e) {
+      print('[ApiConsultas] Error getVentaActivaPorCara: $e');
+      return VentaActivaCara(found: false, cara: cara);
+    }
+  }
+
+  // ============================================================
+  // GOPASS
+  // ============================================================
+  
+  /// Consultar placas GOPASS (proxy a CentralPoint puerto 7011)
+  Future<PlacasGopassResponse> consultarPlacasGoPass({required int cara, String? isla, String? surtidor}) async {
+    try {
+      final body = {
+        'cara': cara,
+        if (isla != null) 'isla': isla,
+        if (surtidor != null) 'surtidor': surtidor,
+      };
+      
+      print('[ApiConsultas] POST gopass/consultar-placas: $body');
+      
+      final response = await http.post(
+        Uri.parse('$_baseUrl/ventas/gopass/consultar-placas'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 35));
+      
+      print('[ApiConsultas] GOPASS Response ${response.statusCode}: ${response.body}');
+      
+      final data = json.decode(response.body);
+      final placasJson = data['placas'] as List<dynamic>? ?? [];
+      
+      return PlacasGopassResponse(
+        success: data['success'] == true,
+        message: data['message'] ?? '',
+        placas: placasJson.map((p) => PlacaGopass.fromJson(p)).toList(),
+      );
+    } catch (e) {
+      print('[ApiConsultas] Error consultarPlacasGoPass: $e');
+      return PlacasGopassResponse(success: false, message: 'Error de conexión: $e', placas: []);
+    }
+  }
+
+  // ============================================================
+  // RUMBO (Gestión de Flotas)
+  // ============================================================
+
+  /// Obtener mangueras disponibles para RUMBO
+  Future<List<MangueraRumbo>> getManguerasRumbo() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/rumbo/mangueras'),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as List<dynamic>;
+        return data.map((m) => MangueraRumbo.fromJson(m)).toList();
+      }
+      print('[ApiConsultas] Error getManguerasRumbo: ${response.statusCode}');
+      return [];
+    } catch (e) {
+      print('[ApiConsultas] Error getManguerasRumbo: $e');
+      return [];
+    }
+  }
+
+  /// Obtener medios de identificación disponibles para RUMBO
+  Future<List<MedioIdentificacionRumbo>> getMediosIdentificacionRumbo() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/rumbo/medios-identificacion'),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final mediosJson = data['medios'] as List<dynamic>;
+        return mediosJson.map((m) => MedioIdentificacionRumbo.fromJson(m)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('[ApiConsultas] Error getMediosIdentificacionRumbo: $e');
+      return [];
+    }
+  }
+
+  /// Solicitar autorización RUMBO
+  Future<AutorizarRumboResponse> autorizarRumbo({
+    required int surtidor,
+    required int cara,
+    required int manguera,
+    required int grado,
+    required int valorOdometro,
+    required int codigoFamiliaProducto,
+    required double precioVentaUnidad,
+    required int medioAutorizacion,
+    required String serialIdentificador,
+    String codigoSeguridad = '',
+    int? identificadorPromotor,
+    int? idPromotor,
+    int codigoTipoIdentificador = 1,
+    int? codigoProducto,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'surtidor': surtidor,
+        'cara': cara,
+        'manguera': manguera,
+        'grado': grado,
+        'valor_odometro': valorOdometro,
+        'codigo_familia_producto': codigoFamiliaProducto,
+        'precio_venta_unidad': precioVentaUnidad,
+        'medio_autorizacion': medioAutorizacion,
+        'serial_identificador': serialIdentificador,
+        'codigo_seguridad': codigoSeguridad,
+        'codigo_tipo_identificador': codigoTipoIdentificador,
+        if (identificadorPromotor != null) 'identificador_promotor': identificadorPromotor,
+        if (idPromotor != null) 'id_promotor': idPromotor,
+        if (codigoProducto != null) 'codigo_producto': codigoProducto,
+      };
+
+      print('[ApiConsultas] POST rumbo/autorizar: $body');
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/rumbo/autorizar'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 35));
+
+      print('[ApiConsultas] RUMBO autorizar response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return AutorizarRumboResponse.fromJson(data);
+      }
+      return AutorizarRumboResponse(
+        autorizado: false,
+        mensaje: 'Error HTTP ${response.statusCode}',
+      );
+    } catch (e) {
+      print('[ApiConsultas] Error autorizarRumbo: $e');
+      return AutorizarRumboResponse(
+        autorizado: false,
+        mensaje: 'Error de conexión: $e',
+      );
+    }
+  }
+
+  /// Enviar datos adicionales post-autorización RUMBO
+  Future<bool> enviarDatosAdicionalesRumbo({
+    required String identificadorAutorizacion,
+    String? placa,
+    String? codigoSeguridad,
+    String? informacionAdicional,
+  }) async {
+    try {
+      final body = {
+        'identificador_autorizacion': identificadorAutorizacion,
+        if (placa != null) 'placa': placa,
+        if (codigoSeguridad != null) 'codigo_seguridad': codigoSeguridad,
+        if (informacionAdicional != null) 'informacion_adicional': informacionAdicional,
+      };
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/rumbo/datos-adicionales'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['exito'] == true;
+      }
+      return false;
+    } catch (e) {
+      print('[ApiConsultas] Error enviarDatosAdicionalesRumbo: $e');
+      return false;
+    }
+  }
+
+  /// Consultar lectura pendiente de identificador (Ibutton/RFID) para una cara.
+  /// Usa long-polling: espera hasta [segundosEspera] segundos por una lectura.
+  /// Retorna {medio, serial, promotor_id, promotor_nombre} o null si no hay.
+  Future<Map<String, dynamic>?> getLecturaIdentificadorRumbo({
+    required int cara,
+    int segundosEspera = 10,
+  }) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/rumbo/lectura-identificador/$cara?esperar=$segundosEspera'),
+      ).timeout(Duration(seconds: segundosEspera + 5));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['disponible'] == true && data['lectura'] != null) {
+          return Map<String, dynamic>.from(data['lectura']);
+        }
+      }
+      return null;
+    } catch (e) {
+      print('[ApiConsultas] Error getLecturaIdentificadorRumbo: $e');
+      return null;
+    }
+  }
+
+  /// Limpiar lectura pendiente de una cara
+  Future<void> limpiarLecturaIdentificadorRumbo(int cara) async {
+    try {
+      await http.delete(
+        Uri.parse('$_baseUrl/rumbo/lectura-identificador/$cara'),
+      ).timeout(const Duration(seconds: 5));
+    } catch (e) {
+      print('[ApiConsultas] Error limpiarLecturaIdentificadorRumbo: $e');
+    }
+  }
+
+  /// Confirmar venta UREA: insertar en ct_movimientos para que aparezca en "Ventas sin resolver"
+  /// Java: RumboView.insertInformacionMovimiento() → fnc_insertar_ct_movimientos
+  Future<Map<String, dynamic>> confirmarVentaUrea({
+    required int surtidor,
+    required int cara,
+    required int valorOdometro,
+    required int codigoFamiliaProducto,
+    required double precioVentaUnidad,
+    required String serialIdentificador,
+    required int medioAutorizacion,
+    required Map<String, dynamic> dataCompleta,
+    String codigoSeguridad = '',
+    int codigoTipoIdentificador = 1,
+    int identificadorGrado = 0,
+    double cantidadSuministrada = 0,
+  }) async {
+    try {
+      final body = {
+        'surtidor': surtidor,
+        'cara': cara,
+        'valor_odometro': valorOdometro,
+        'codigo_familia_producto': codigoFamiliaProducto,
+        'precio_venta_unidad': precioVentaUnidad,
+        'serial_identificador': serialIdentificador,
+        'medio_autorizacion': medioAutorizacion,
+        'data_completa': dataCompleta,
+        'codigo_seguridad': codigoSeguridad,
+        'codigo_tipo_identificador': codigoTipoIdentificador,
+        'identificador_grado': identificadorGrado,
+        'cantidad_suministrada': cantidadSuministrada,
+      };
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/rumbo/confirmar-urea'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      print('[ApiConsultas] Error confirmarVentaUrea: $e');
+      return {'exito': false, 'mensaje': 'Error: $e'};
+    }
+  }
+
+  /// Obtener detalles de una venta UREA desde ct_movimientos (para pantalla finalizar en ventas sin resolver)
+  Future<Map<String, dynamic>> getDetallesUreaVenta(int movimientoId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/rumbo/detalles-urea/$movimientoId'),
+      );
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+      return {};
+    } catch (e) {
+      print('[ApiConsultas] Error getDetallesUreaVenta: $e');
+      return {};
+    }
+  }
+
+  /// Finalizar venta UREA desde "Ventas sin resolver" (actualizar cantidad y total)
+  Future<Map<String, dynamic>> finalizarUreaSinResolver({
+    required int movimientoId,
+    required double cantidadSuministrada,
+    required double precioUrea,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/rumbo/finalizar-urea-sin-resolver'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'movimiento_id': movimientoId,
+          'cantidad_suministrada': cantidadSuministrada,
+          'precio_urea': precioUrea,
+        }),
+      );
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      print('[ApiConsultas] Error finalizarUreaSinResolver: $e');
+      return {'exito': false, 'mensaje': 'Error: $e'};
+    }
+  }
+
+  // ============================================================
+  // TURNOS (Gestión de Jornadas)
+  // ============================================================
+
+  /// Obtener surtidores de la estación con host (para leer totalizadores)
+  Future<List<Map<String, dynamic>>> getSurtidoresEstacion() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/turnos/surtidores-estacion'),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final surtidores = data['surtidores'] as List<dynamic>;
+        print('[ApiConsultas] Surtidores estación: ${surtidores.length}');
+        return surtidores.cast<Map<String, dynamic>>();
+      }
+      print('[ApiConsultas] Error getSurtidoresEstacion: ${response.statusCode}');
+      return [];
+    } catch (e) {
+      print('[ApiConsultas] Error getSurtidoresEstacion: $e');
+      return [];
+    }
+  }
+
+  /// Leer totalizadores de un surtidor via puerto 8019
+  Future<Map<String, dynamic>> getTotalizadores({
+    required int surtidor,
+    required String host,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/turnos/totalizadores'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'surtidor': surtidor, 'host': host}),
+      ).timeout(const Duration(seconds: 35));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}', 'data': []};
+    } catch (e) {
+      print('[ApiConsultas] Error getTotalizadores: $e');
+      return {'exito': false, 'mensaje': 'Error: $e', 'data': []};
+    }
+  }
+
+  /// Validar un promotor por identificación y PIN opcional
+  Future<Map<String, dynamic>> validarPromotor(String identificacion, {String? pin}) async {
+    try {
+      final body = <String, dynamic>{'identificacion': identificacion};
+      if (pin != null && pin.isNotEmpty) body['pin'] = pin;
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/turnos/validar-promotor'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      print('[ApiConsultas] Error validarPromotor: $e');
+      return {'exito': false, 'mensaje': 'Error: $e'};
+    }
+  }
+
+  /// Iniciar turno (jornada) de un promotor
+  Future<Map<String, dynamic>> iniciarTurno({
+    required int personasId,
+    int saldo = 0,
+    List<int> surtidores = const [],
+    List<dynamic>? totalizadores,
+    bool esPrincipal = true,
+  }) async {
+    try {
+      final body = {
+        'personas_id': personasId,
+        'saldo': saldo,
+        'surtidores': surtidores,
+        'totalizadores': totalizadores,
+        'es_principal': esPrincipal,
+      };
+
+      print('[ApiConsultas] POST turnos/iniciar: persona=$personasId saldo=$saldo');
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/turnos/iniciar'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 60));
+
+      print('[ApiConsultas] Turno iniciar response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      print('[ApiConsultas] Error iniciarTurno: $e');
+      return {'exito': false, 'mensaje': 'Error: $e'};
+    }
+  }
+
+  /// Finalizar turno (jornada) de uno o varios promotores
+  Future<Map<String, dynamic>> finalizarTurno({
+    required List<Map<String, dynamic>> personas,
+    List<dynamic>? totalizadoresFinales,
+    bool esPrincipal = false,
+  }) async {
+    try {
+      final body = {
+        'personas': personas,
+        'totalizadoresFinales': totalizadoresFinales,
+        'es_principal': esPrincipal,
+      };
+
+      final response = await http.put(
+        Uri.parse('$_baseUrl/turnos/finalizar'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      print('[ApiConsultas] Error finalizarTurno: $e');
+      return {'exito': false, 'mensaje': 'Error: $e'};
+    }
+  }
+
+  /// Obtener turnos activos
+  Future<List<Map<String, dynamic>>> getTurnosActivosApi() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/turnos/activos'),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final turnos = data['turnos'] as List<dynamic>;
+        return turnos.cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (e) {
+      print('[ApiConsultas] Error getTurnosActivosApi: $e');
+      return [];
+    }
+  }
+
+  // ============================================================
+  // FIDELIZACIÓN (Club Terpel / Vive Terpel)
+  // ============================================================
+
+  /// Validar si un cliente existe en el programa de fidelización
+  Future<Map<String, dynamic>> validarClienteFidelizacion({
+    required String numeroIdentificacion,
+    int codigoTipoIdentificacion = 1,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/fidelizacion/validar-cliente'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'numero_identificacion': numeroIdentificacion,
+          'codigo_tipo_identificacion': codigoTipoIdentificacion,
+        }),
+      ).timeout(const Duration(seconds: 20));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      print('[ApiConsultas] Error validarClienteFidelizacion: $e');
+      return {'exito': false, 'mensaje': 'Error: $e'};
+    }
+  }
+
+  /// Acumular puntos de fidelización para una venta
+  Future<Map<String, dynamic>> acumularPuntosFidelizacion({
+    required int movimientoId,
+    required String numeroIdentificacion,
+    int codigoTipoIdentificacion = 1,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/fidelizacion/acumular'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'movimiento_id': movimientoId,
+          'numero_identificacion': numeroIdentificacion,
+          'codigo_tipo_identificacion': codigoTipoIdentificacion,
+        }),
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      print('[ApiConsultas] Error acumularPuntosFidelizacion: $e');
+      return {'exito': false, 'mensaje': 'Error: $e'};
+    }
+  }
+
+  /// Verificar si una venta ya fue fidelizada
+  Future<bool> estaFidelizada(int movimientoId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/fidelizacion/estado/$movimientoId'),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['fidelizada'] == true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Imprimir ticket de venta
+  /// Java: ImpresionVenta.impirmir() → POST localhost:8001/print-ticket/sales
+  Future<Map<String, dynamic>> imprimirVenta({
+    required int movimientoId,
+    String reportType = 'FACTURA',
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/ventas/imprimir'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'movimiento_id': movimientoId,
+          'report_type': reportType,
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      print('[ApiConsultas] Error imprimirVenta: $e');
+      return {'exito': false, 'mensaje': 'Error: $e'};
+    }
+  }
+}
