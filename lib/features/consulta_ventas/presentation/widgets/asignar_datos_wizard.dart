@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/services/api_consultas_service.dart';
 import '../../../../core/services/lazo_express_api_service.dart';
 import '../../../../core/widgets/teclado_tactil.dart';
+import '../../../home/presentation/widgets/medios_pago_bottom_sheet.dart' show AppTerpelCountdownDialog;
 import 'medio_pago_item.dart';
 
 // ============================================================
@@ -39,6 +40,8 @@ class _AsignarDatosWizardState extends State<AsignarDatosWizard> {
   int _currentStep = 0;
   bool _isLoading = false;
   bool _consultandoCliente = false;
+  bool _yaGuardado = false;
+  bool _clientePrecargado = false;
   
   // Controladores
   final _placaController = TextEditingController();
@@ -48,7 +51,7 @@ class _AsignarDatosWizardState extends State<AsignarDatosWizard> {
   final _ordenController = TextEditingController();
   
   // Opciones
-  bool _esCredito = false;
+  bool _imprimirFactura = true;
   
   // Cliente
   final ApiConsultasService _apiService = ApiConsultasService();
@@ -68,11 +71,13 @@ class _AsignarDatosWizardState extends State<AsignarDatosWizard> {
   // ============================================================
 
   /// Solo se salta el paso de Pago para medios especiales (GOPASS, APP TERPEL)
+  ///  /// EXCEPTO si GoPass o AppTerpel fueron rechazados.
   bool get _saltarPasoPago {
     if (_mediosAgregados.isEmpty || _pendientePago > 0) return false;
+    if (_gopassRechazado || _appTerpelRechazado) return false;
     return _mediosAgregados.every((m) {
       final nombre = m.medio.nombre.toUpperCase();
-      return nombre.contains('GOPASS') || nombre.contains('APP TERPEL') || nombre.contains('APPTERPEL');
+      return _esGoPass(nombre) || nombre.contains('APP TERPEL') || nombre.contains('APPTERPEL');
     });
   }
   
@@ -115,8 +120,9 @@ class _AsignarDatosWizardState extends State<AsignarDatosWizard> {
     _inicializarMediosPago();
   }
 
-  /// Primero verifica si APP TERPEL fue rechazado, luego carga medios
+  /// Primero verifica si APP TERPEL o GOPASS fue rechazado, luego carga medios
   Future<void> _inicializarMediosPago() async {
+    await _verificarGoPassRechazado();
     await _verificarAppTerpelRechazado();
     await _cargarMediosPago();
     await _cargarMediosPagoExistentes();
@@ -139,6 +145,28 @@ class _AsignarDatosWizardState extends State<AsignarDatosWizard> {
   // ============================================================
 
   bool _appTerpelRechazado = false;
+  bool _gopassRechazado = false;
+
+  /// Helper para verificar si un nombre es GoPass (con o sin espacio)
+  bool _esGoPass(String nombre) {
+    final upper = nombre.toUpperCase();
+    return upper.contains('GOPASS') || upper.contains('GO PASS');
+  }
+
+  /// Verifica si GoPass fue rechazado revisando si tiene medio GOPASS pre-asignado.
+  /// Si la venta aparece en 'sin resolver' con medio GOPASS, fue rechazado.
+  Future<void> _verificarGoPassRechazado() async {
+    try {
+      final mediosExistentes = await _apiService.getMediosPagoVenta(widget.venta.id);
+      final tieneGopass = mediosExistentes.any((m) => _esGoPass(m.nombre));
+      if (tieneGopass) {
+        _gopassRechazado = true;
+        debugPrint('[AsignarDatos] GOPASS fue rechazado para venta ${widget.venta.id}');
+      }
+    } catch (e) {
+      debugPrint('[AsignarDatos] Error verificando GoPass: $e');
+    }
+  }
 
   Future<void> _verificarAppTerpelRechazado() async {
     try {
@@ -165,10 +193,10 @@ class _AsignarDatosWizardState extends State<AsignarDatosWizard> {
     try {
       final medios = await _apiService.getMediosPago(traerEfectivo: false);
 
-      // Filtrar GOPASS (solo desde Status Pump) y APP TERPEL si fue rechazado
+      // Filtrar GOPASS/GO PASS (solo desde Status Pump) y APP TERPEL/GOPASS si fueron rechazados
       final mediosFiltrados = medios.where((m) {
         final nombre = m.nombre.toUpperCase();
-        if (nombre.contains('GOPASS')) return false;
+        if (_esGoPass(nombre)) return false;
         if (_appTerpelRechazado && (nombre.contains('APP TERPEL') || nombre.contains('APPTERPEL'))) return false;
         return true;
       }).toList();
@@ -189,11 +217,15 @@ class _AsignarDatosWizardState extends State<AsignarDatosWizard> {
       if (mediosExistentes.isNotEmpty) {
         setState(() {
           for (var medio in mediosExistentes) {
-            // Si APP TERPEL fue rechazado, no agregar ese medio pre-asignado
+            // Si APP TERPEL o GOPASS fue rechazado, no agregar ese medio pre-asignado
             final nombreUpper = medio.nombre.toUpperCase();
             if (_appTerpelRechazado && 
                 (nombreUpper.contains('APP TERPEL') || nombreUpper.contains('APPTERPEL'))) {
               debugPrint('[AsignarDatos] Omitiendo medio rechazado: ${medio.nombre}');
+              continue;
+            }
+            if (_gopassRechazado && _esGoPass(nombreUpper)) {
+              debugPrint('[AsignarDatos] Omitiendo medio GOPASS rechazado: ${medio.nombre}');
               continue;
             }
 
@@ -221,24 +253,75 @@ class _AsignarDatosWizardState extends State<AsignarDatosWizard> {
     } catch (e) {
       debugPrint('[AsignarDatos] Error cargando medios existentes: $e');
     }
+
+    // Si GoPass fue rechazado y no hay medios cargados, pre-seleccionar EFECTIVO
+    if (_gopassRechazado && _mediosAgregados.isEmpty) {
+      try {
+        final mediosConEfectivo = await _apiService.getMediosPago(traerEfectivo: true);
+        final efectivo = mediosConEfectivo.firstWhere(
+          (m) => m.nombre.toUpperCase().contains('EFECTIVO'),
+          orElse: () => MedioPagoConsulta(id: 1, codigo: '01', nombre: 'EFECTIVO', codigoDian: 10, requiereVoucher: false),
+        );
+        setState(() {
+          _mediosAgregados.add(MedioPagoItemConsulta(
+            medio: efectivo,
+            valor: _totalVenta,
+            voucher: '',
+          ));
+          _valorPagoController.text = '0';
+        });
+        debugPrint('[AsignarDatos] EFECTIVO pre-seleccionado por GoPass rechazado: \$${_totalVenta}');
+      } catch (e) {
+        debugPrint('[AsignarDatos] Error pre-seleccionando EFECTIVO: $e');
+      }
+    }
   }
   
   Future<void> _cargarTiposIdentificacion() async {
     final tipos = await _apiService.getTiposIdentificacion();
+    
+    // Verificar si hay datos del cliente pre-cargados desde statusPump
+    final identPrecargada = widget.venta.clienteIdentificacion ?? '';
+    final tipoDocPrecargado = widget.venta.clienteTipoDocumento;
+    final esClienteReal = identPrecargada.isNotEmpty 
+        && identPrecargada != '222222222222'
+        && identPrecargada != '0';
+    
     setState(() {
       _tiposIdentificacion = tipos;
-      _tipoSeleccionado = tipos.firstWhere(
-        (t) => t.esConsumidorFinal,
-        orElse: () => tipos.firstWhere(
-          (t) => t.nombre.toLowerCase().contains('cedula'),
-          orElse: () => tipos.first,
-        ),
-      );
-      if (_tipoSeleccionado?.esConsumidorFinal == true) {
-        _identificacionController.text = _tipoSeleccionado!.identificacionDefecto;
-        _nombreController.text = 'CONSUMIDOR FINAL (Presione CONSULTAR)';
+      
+      if (esClienteReal && tipoDocPrecargado != null) {
+        // Pre-seleccionar el tipo de documento del cliente existente
+        _tipoSeleccionado = tipos.firstWhere(
+          (t) => t.codigo == tipoDocPrecargado,
+          orElse: () => tipos.firstWhere(
+            (t) => t.nombre.toLowerCase().contains('cedula'),
+            orElse: () => tipos.first,
+          ),
+        );
+        _identificacionController.text = identPrecargada;
+        _clientePrecargado = true;
+      } else {
+        // Default: CONSUMIDOR FINAL
+        _tipoSeleccionado = tipos.firstWhere(
+          (t) => t.esConsumidorFinal,
+          orElse: () => tipos.firstWhere(
+            (t) => t.nombre.toLowerCase().contains('cedula'),
+            orElse: () => tipos.first,
+          ),
+        );
+        if (_tipoSeleccionado?.esConsumidorFinal == true) {
+          _identificacionController.text = _tipoSeleccionado!.identificacionDefecto;
+          _nombreController.text = 'CONSUMIDOR FINAL (Presione CONSULTAR)';
+        }
       }
     });
+    
+    // Auto-consultar si hay datos del cliente pre-cargados
+    if (esClienteReal && identPrecargada.isNotEmpty) {
+      debugPrint('[AsignarDatos] Cliente pre-cargado: $identPrecargada — auto-consultando...');
+      await _consultarCliente();
+    }
   }
 
   // ============================================================
@@ -318,6 +401,12 @@ class _AsignarDatosWizardState extends State<AsignarDatosWizard> {
   // ============================================================
 
   Future<void> _guardarDatos() async {
+    // Guard: prevenir doble guardado
+    if (_yaGuardado) {
+      debugPrint('[AsignarDatos] ⚠ Ya se guardó esta venta, ignorando segundo intento');
+      return;
+    }
+    
     if (_mediosAgregados.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Debe agregar al menos un medio de pago'), backgroundColor: Colors.orange),
@@ -353,7 +442,6 @@ class _AsignarDatosWizardState extends State<AsignarDatosWizard> {
         identificacionCliente: _identificacionController.text.trim().isNotEmpty ? _identificacionController.text.trim() : null,
         tipoDocumento: _tipoSeleccionado?.codigo,
         orden: _ordenController.text.trim().isNotEmpty ? _ordenController.text.trim() : null,
-        esCredito: _esCredito,
       );
       
       if (!responseDatos.success) {
@@ -384,29 +472,48 @@ class _AsignarDatosWizardState extends State<AsignarDatosWizard> {
         );
         
         if (!mounted) return;
-        final messenger = ScaffoldMessenger.of(context);
-        final onComplete = widget.onComplete;
-        Navigator.pop(context);
+        setState(() => _isLoading = false);
         
         if (responseAppTerpel.success) {
-          messenger.showSnackBar(
-            const SnackBar(
-              content: Row(children: [
-                Icon(Icons.phone_iphone, color: Colors.white),
-                SizedBox(width: 12),
-                Text('APP TERPEL asignado - Pendiente de aprobación'),
-              ]),
-              backgroundColor: Color(0xFF6A1B9A),
-              duration: Duration(seconds: 4),
+          // Mostrar countdown dialog que espera aprobación del orquestador
+          // y luego envía al 7011 automáticamente
+          final result = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AppTerpelCountdownDialog(
+              apiService: _apiService,
+              movimientoId: widget.venta.id,
+              cara: 0, // Sin Resolver no tiene cara específica
+              monto: medioAppTerpel.first.valor,
             ),
           );
           
-          // Enviar al orquestador (puerto 5555)
-          _apiService.enviarPagoAppTerpel(movimientoId: widget.venta.id);
+          if (!mounted) return;
+          final messenger = ScaffoldMessenger.of(context);
+          final onComplete = widget.onComplete;
+          Navigator.pop(context);
           
+          messenger.showSnackBar(
+            SnackBar(
+              content: Row(children: [
+                Icon(
+                  result == true ? Icons.check_circle : Icons.info_outline,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: Text(
+                  result == true
+                      ? 'APP TERPEL aprobado ✓ Factura enviada'
+                      : 'APP TERPEL - Resultado pendiente',
+                )),
+              ]),
+              backgroundColor: result == true ? Colors.teal : Colors.orange,
+              duration: const Duration(seconds: 4),
+            ),
+          );
           onComplete();
         } else {
-          messenger.showSnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(children: [const Icon(Icons.error, color: Colors.white), const SizedBox(width: 12), Expanded(child: Text(responseAppTerpel.message))]),
               backgroundColor: Colors.red,
@@ -433,21 +540,64 @@ class _AsignarDatosWizardState extends State<AsignarDatosWizard> {
         
         if (!mounted) return;
         
-        // Guardar referencia al messenger ANTES de pop para evitar context inválido
-        final messenger = ScaffoldMessenger.of(context);
-        final onComplete = widget.onComplete;
-        Navigator.pop(context);
-        
         if (responsePagos.success) {
+          // Marcar como guardado para prevenir doble envío
+          _yaGuardado = true;
+          
+          // ── Enviar a Facturación Electrónica (7011) + transmision ──
+          // Se hace ANTES de cerrar el diálogo para que el async no se pierda
+          String feMessage = '';
+          Color feColor = Colors.green;
+          try {
+            final payloadFe = {
+              'identificadorMovimiento': widget.venta.id,
+              'documentoCliente': _identificacionController.text.trim(),
+              'tipoDocumentoCliente': _tipoSeleccionado?.codigo ?? 13,
+              'nombreRazonSocial': _nombreController.text.trim(),
+            };
+            final fResult = await _apiService.enviarFEVentaSinResolver(
+              movimientoId: widget.venta.id,
+              payloadFe: payloadFe,
+              imprimirDespues: _imprimirFactura,
+            );
+            if (fResult['ok'] == true) {
+              feMessage = _imprimirFactura
+                  ? 'Venta gestionada ✓ Factura electrónica enviada ✓ Impresión disparada'
+                  : 'Venta gestionada ✓ Factura electrónica enviada';
+              feColor = Colors.teal;
+            } else {
+              feMessage = 'Venta gestionada ✓ FE pendiente (se reintentará automáticamente)';
+              feColor = Colors.orange;
+            }
+          } catch (feErr) {
+            debugPrint('[AsignarDatos] Error enviando FE: $feErr');
+            feMessage = 'Venta gestionada ✓ FE se reintentará automáticamente';
+            feColor = Colors.orange;
+          }
+
+          if (!mounted) return;
+          final messenger = ScaffoldMessenger.of(context);
+          final onComplete = widget.onComplete;
+          Navigator.pop(context);
+
           messenger.showSnackBar(
-            const SnackBar(
-              content: Row(children: [Icon(Icons.check_circle, color: Colors.white), SizedBox(width: 12), Text('Venta gestionada correctamente')]),
-              backgroundColor: Colors.green,
+            SnackBar(
+              content: Row(children: [
+                Icon(feColor == Colors.teal ? Icons.print : Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text(feMessage)),
+              ]),
+              backgroundColor: feColor,
+              duration: const Duration(seconds: 4),
             ),
           );
+
           // Siempre refrescar la lista después de guardar exitosamente
           onComplete();
         } else {
+          final messenger = ScaffoldMessenger.of(context);
+          final onComplete = widget.onComplete;
+          Navigator.pop(context);
           messenger.showSnackBar(
             SnackBar(
               content: Row(children: [const Icon(Icons.error, color: Colors.white), const SizedBox(width: 12), Expanded(child: Text(responsePagos.message))]),
@@ -682,7 +832,7 @@ class _AsignarDatosWizardState extends State<AsignarDatosWizard> {
             underline: const SizedBox(),
             style: const TextStyle(fontSize: 16, color: Colors.black),
             items: _tiposIdentificacion.map((tipo) => DropdownMenuItem(value: tipo, child: Text(tipo.nombre))).toList(),
-            onChanged: _onTipoIdentificacionChanged,
+            onChanged: _clientePrecargado ? null : _onTipoIdentificacionChanged,
           ),
         ),
       ]),
@@ -690,12 +840,12 @@ class _AsignarDatosWizardState extends State<AsignarDatosWizard> {
       
       // Fila: Identificación + Consultar
       Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-        Expanded(flex: 3, child: CampoConTeclado(label: 'IDENTIFICACIÓN', controller: _identificacionController, icon: Icons.badge, soloNumeros: true, enabled: !esConsumidorFinal)),
+        Expanded(flex: 3, child: CampoConTeclado(label: 'IDENTIFICACIÓN', controller: _identificacionController, icon: Icons.badge, soloNumeros: true, enabled: !esConsumidorFinal && !_clientePrecargado)),
         const SizedBox(width: 12),
         SizedBox(
           height: 60,
           child: ElevatedButton.icon(
-            onPressed: _consultandoCliente ? null : _consultarCliente,
+            onPressed: (_consultandoCliente || _clientePrecargado) ? null : _consultarCliente,
             icon: _consultandoCliente
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : const Icon(Icons.search, size: 24),
@@ -755,22 +905,26 @@ class _AsignarDatosWizardState extends State<AsignarDatosWizard> {
       
       const SizedBox(height: 20),
       
-      // Switch crédito
+      // Switch imprimir factura
       Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: _esCredito ? Colors.orange.withAlpha(20) : Colors.grey.shade100,
+          color: _imprimirFactura ? Colors.teal.withAlpha(20) : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: _esCredito ? Colors.orange : Colors.grey.shade300),
+          border: Border.all(color: _imprimirFactura ? Colors.teal : Colors.grey.shade300),
         ),
         child: Row(children: [
-          Icon(Icons.credit_card, color: _esCredito ? Colors.orange : Colors.grey),
+          Icon(Icons.print, color: _imprimirFactura ? Colors.teal : Colors.grey),
           const SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('¿Es venta a crédito?', style: TextStyle(fontWeight: FontWeight.w600)),
-            Text('Se generará una nota de entrega', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+            const Text('¿Imprimir factura?', style: TextStyle(fontWeight: FontWeight.w600)),
+            Text('Se imprimirá automáticamente con CUFE', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
           ])),
-          Switch(value: _esCredito, onChanged: (value) => setState(() => _esCredito = value), activeColor: Colors.orange),
+          Switch(
+            value: _imprimirFactura,
+            onChanged: (value) => setState(() => _imprimirFactura = value),
+            activeColor: Colors.teal,
+          )
         ]),
       ),
     ]);
@@ -997,7 +1151,7 @@ class _AsignarDatosWizardState extends State<AsignarDatosWizard> {
           if (_ordenController.text.isNotEmpty) _buildResumenItem('Orden', _ordenController.text),
           if (_nombreController.text.isNotEmpty) _buildResumenItem('Cliente', _nombreController.text),
           if (_identificacionController.text.isNotEmpty) _buildResumenItem('Identificación', _identificacionController.text),
-          if (_esCredito) _buildResumenItem('Tipo', 'VENTA A CRÉDITO', isHighlight: true),
+          if (_imprimirFactura) _buildResumenItem('Impresión', 'AUTOMÁTICA CON CUFE', isHighlight: true),
           if (_mediosAgregados.isNotEmpty) ...[
             const Divider(),
             for (var medio in _mediosAgregados)
@@ -1009,14 +1163,14 @@ class _AsignarDatosWizardState extends State<AsignarDatosWizard> {
       
       const SizedBox(height: 16),
       
-      if (_esCredito)
+      if (_imprimirFactura)
         Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: Colors.orange.withAlpha(20), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.orange)),
+          decoration: BoxDecoration(color: Colors.teal.withAlpha(20), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.teal)),
           child: const Row(children: [
-            Icon(Icons.warning_amber, color: Colors.orange),
+            Icon(Icons.print, color: Colors.teal),
             SizedBox(width: 12),
-            Expanded(child: Text('Se generará una nota de entrega y se anulará la factura original.', style: TextStyle(fontSize: 13))),
+            Expanded(child: Text('Se imprimirá automáticamente con CUFE al guardar.', style: TextStyle(fontSize: 13))),
           ]),
         ),
     ]);

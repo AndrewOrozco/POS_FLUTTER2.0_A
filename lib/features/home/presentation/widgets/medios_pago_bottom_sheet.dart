@@ -798,6 +798,11 @@ class _AppTerpelCountdownDialogState extends State<AppTerpelCountdownDialog>
   String _mensajeDetalle = '';
   AppTerpelPagoResponse? _respuestaOrquestador;
 
+  // Estado de Facturación Electrónica (7011)
+  bool _enviandoFE = false;
+  bool _feEnviada = false;
+  String _feMensaje = '';
+
   // Suscripción al WebSocket del orquestador
   StreamSubscription<PaymentNotification>? _wsSubscription;
 
@@ -843,7 +848,62 @@ class _AppTerpelCountdownDialogState extends State<AppTerpelCountdownDialog>
           _countdownController.stop();
         }
       });
+
+      // Si fue aprobado, enviar al 7011 automáticamente
+      if (notification.isAprobado) {
+        _enviarFETrasPagoAprobado();
+      }
     });
+  }
+
+  /// Enviar Facturación Electrónica (7011) después de que el pago fue aprobado
+  Future<void> _enviarFETrasPagoAprobado() async {
+    if (_enviandoFE || _feEnviada) return;
+    
+    setState(() {
+      _enviandoFE = true;
+      _mensajeDetalle = 'Enviando factura electrónica...';
+    });
+
+    try {
+      final payloadFe = {
+        'identificadorMovimiento': widget.movimientoId,
+        'documentoCliente': '222222222222', // Se obtiene del mov en backend
+        'tipoDocumentoCliente': 13,
+        'nombreRazonSocial': 'CONSUMIDOR FINAL',
+      };
+
+      final result = await widget.apiService.enviarFEVentaSinResolver(
+        movimientoId: widget.movimientoId,
+        payloadFe: payloadFe,
+        imprimirDespues: true,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _enviandoFE = false;
+        _feEnviada = true;
+        if (result['ok'] == true) {
+          _feMensaje = '✓ Factura electrónica enviada';
+          _mensajeDetalle = 'Pago aprobado ✓ FE enviada ✓ Imprimiendo...';
+        } else {
+          _feMensaje = 'FE pendiente (se reintentará)';
+          _mensajeDetalle = 'Pago aprobado ✓ FE se reintentará automáticamente';
+        }
+      });
+
+      print('[CountdownDialog] FE resultado: ${result['ok']} - $_feMensaje');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _enviandoFE = false;
+        _feEnviada = true;
+        _feMensaje = 'FE se reintentará automáticamente';
+        _mensajeDetalle = 'Pago aprobado ✓ FE se reintentará';
+      });
+      print('[CountdownDialog] Error enviando FE: $e');
+    }
   }
 
   Future<void> _iniciarProceso() async {
@@ -1057,7 +1117,7 @@ class _AppTerpelCountdownDialogState extends State<AppTerpelCountdownDialog>
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => Navigator.pop(context, _pagoAprobado),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _pagoAprobado 
                         ? Colors.green 
@@ -1067,7 +1127,8 @@ class _AppTerpelCountdownDialogState extends State<AppTerpelCountdownDialog>
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: Text(
-                    _pagoAprobado ? 'CERRAR - PAGO APROBADO' 
+                    _pagoAprobado 
+                        ? (_enviandoFE ? 'ENVIANDO FACTURA...' : (_feEnviada ? 'CERRAR' : 'CERRAR - PAGO APROBADO'))
                         : (_pagoRechazado ? 'CERRAR' : 'ACEPTAR'),
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),

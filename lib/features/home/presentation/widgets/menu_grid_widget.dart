@@ -6,6 +6,9 @@ import '../../../../core/providers/session_provider.dart';
 import '../../../consulta_ventas/consulta_ventas.dart';
 import '../../../rumbo/presentation/pages/rumbo_page.dart';
 import '../../../turnos/presentation/pages/turnos_page.dart';
+import '../../../gopass/presentation/pages/gopass_estado_pago_page.dart';
+import '../../../gopass/presentation/pages/gopass_enviar_pago_page.dart';
+import '../../../canastilla/presentation/pages/canastilla_page.dart';
 
 class MenuGridWidget extends StatelessWidget {
   const MenuGridWidget({super.key});
@@ -52,7 +55,10 @@ class MenuGridWidget extends StatelessWidget {
                   color: const Color(0xFFFFF8E1),
                   iconColor: const Color(0xFFFF8F00),
                   onTap: () => _verificarTurnoYNavegar(context, 'Canastilla', () {
-                    print('Navegar a Canastilla');
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const CanastillaPage()),
+                    );
                   }),
                 ),
                 _buildMenuButton(
@@ -116,6 +122,7 @@ class MenuGridWidget extends StatelessWidget {
                   title: 'Gopass',
                   color: const Color(0xFFE8F5E8),
                   iconColor: const Color(0xFF2E7D32),
+                  onTap: () => _mostrarMenuGopass(context),
                 ),
               ],
             ),
@@ -194,6 +201,134 @@ class MenuGridWidget extends StatelessWidget {
             child: Text('CERRAR', style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w600)),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Muestra las opciones de GoPass: Enviar Pago y Estado Pago
+  void _mostrarMenuGopass(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+        title: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F5E9),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.credit_card, color: Color(0xFF2E7D32), size: 28),
+            ),
+            const SizedBox(width: 14),
+            const Text('GoPass', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
+          ],
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Opcion 1: Enviar Pago
+            _buildGopassOpcion(
+              icon: Icons.send_rounded,
+              titulo: 'ENVIAR PAGO',
+              subtitulo: 'Enviar pago de venta a GoPass',
+              color: const Color(0xFFB71C1C),
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GopassEnviarPagoPage()),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            // Opcion 2: Estado Pago
+            _buildGopassOpcion(
+              icon: Icons.fact_check_rounded,
+              titulo: 'ESTADO PAGO',
+              subtitulo: 'Consultar estado de pagos GoPass',
+              color: const Color(0xFF2E7D32),
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GopassEstadoPagoPage()),
+                );
+              },
+            ),
+          ],
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('CERRAR', style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGopassOpcion({
+    required IconData icon,
+    required String titulo,
+    required String subtitulo,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          decoration: BoxDecoration(
+            border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+            borderRadius: BorderRadius.circular(14),
+            color: color.withOpacity(0.05),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: Colors.white, size: 26),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      titulo,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: color,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitulo,
+                      style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios, size: 18, color: color.withOpacity(0.5)),
+            ],
+          ),
+        ),
       ),
     );
   }

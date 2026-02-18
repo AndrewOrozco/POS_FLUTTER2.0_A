@@ -23,6 +23,10 @@ class VentaSinResolver {
   final String? estadoDatafono;
   final String? placa;
   final int? codigoAutorizacion;
+  // Datos del cliente pre-cargados desde atributos
+  final String? clienteNombre;
+  final String? clienteIdentificacion;
+  final int? clienteTipoDocumento;
 
   VentaSinResolver({
     required this.id,
@@ -38,6 +42,9 @@ class VentaSinResolver {
     this.estadoDatafono,
     this.placa,
     this.codigoAutorizacion,
+    this.clienteNombre,
+    this.clienteIdentificacion,
+    this.clienteTipoDocumento,
   });
 
   factory VentaSinResolver.fromJson(Map<String, dynamic> json) {
@@ -55,6 +62,9 @@ class VentaSinResolver {
       estadoDatafono: json['estado_datafono'],
       placa: json['placa'],
       codigoAutorizacion: _toIntNullable(json['codigo_autorizacion']),
+      clienteNombre: json['cliente_nombre'],
+      clienteIdentificacion: json['cliente_identificacion'],
+      clienteTipoDocumento: _toIntNullable(json['cliente_tipo_documento']),
     );
   }
 
@@ -493,6 +503,7 @@ class VentaActivaCara {
   final double? monto;
   final double? volumen;
   final String? estado;
+  final bool statusPump;
   
   VentaActivaCara({
     required this.found,
@@ -502,6 +513,7 @@ class VentaActivaCara {
     this.monto,
     this.volumen,
     this.estado,
+    this.statusPump = false,
   });
   
   factory VentaActivaCara.fromJson(Map<String, dynamic> json) {
@@ -513,6 +525,7 @@ class VentaActivaCara {
       monto: json['monto'] != null ? parseDouble(json['monto']) : null,
       volumen: json['volumen'] != null ? parseDouble(json['volumen']) : null,
       estado: json['estado']?.toString(),
+      statusPump: json['status_pump'] == true,
     );
   }
 }
@@ -540,11 +553,21 @@ class PlacaGopass {
   factory PlacaGopass.fromJson(Map<String, dynamic> json) {
     return PlacaGopass(
       placa: json['placa']?.toString() ?? '',
-      tagGopass: json['tag_gopass']?.toString() ?? '',
-      nombreUsuario: json['nombre_usuario']?.toString() ?? '',
+      tagGopass: (json['tagGopass'] ?? json['tag_gopass'])?.toString() ?? '',
+      nombreUsuario: (json['nombreUsuario'] ?? json['nombre_usuario'])?.toString() ?? '',
       isla: json['isla']?.toString() ?? '',
       fechahora: json['fechahora']?.toString() ?? '',
     );
+  }
+
+  /// Valida 3 o 6 dígitos de la placa (Java: ValidarPlacaGoPassUseCase)
+  bool validarDigitos(String digitos) {
+    if (digitos.length == 3) {
+      return placa.toUpperCase().endsWith(digitos.toUpperCase());
+    } else if (digitos.length == 6) {
+      return placa.toUpperCase() == digitos.toUpperCase();
+    }
+    return false;
   }
 }
 
@@ -694,6 +717,354 @@ class AutorizarRumboResponse {
           : null,
       esUrea: json['es_urea'] == true,
       litrosAutorizados: (json['litros_autorizados'] is num) ? (json['litros_autorizados'] as num).toDouble() : null,
+    );
+  }
+}
+
+// ============================================================
+// GoPass - Transacción
+// ============================================================
+
+class TransaccionGopass {
+  final int? idTransaccionGopass;
+  final int? idVentaTerpel;
+  final int? idMovimiento;
+  final String? idMovimientoCompuesto;
+  final int? isla;
+  final int? surtidor;
+  final int? cara;
+  final int? valor;
+  final String placa;
+  final String codigoEds;
+  final String estado;
+  final String fecha;
+
+  TransaccionGopass({
+    this.idTransaccionGopass,
+    this.idVentaTerpel,
+    this.idMovimiento,
+    this.idMovimientoCompuesto,
+    this.isla,
+    this.surtidor,
+    this.cara,
+    this.valor,
+    this.placa = '',
+    this.codigoEds = '',
+    this.estado = '',
+    this.fecha = '',
+  });
+
+  factory TransaccionGopass.fromJson(Map<String, dynamic> json) {
+    return TransaccionGopass(
+      idTransaccionGopass: parseIntNullable(json['id_transaccion_gopass']),
+      idVentaTerpel: parseIntNullable(json['id_venta_terpel']),
+      idMovimiento: parseIntNullable(json['id_movimiento']),
+      idMovimientoCompuesto: json['id_movimiento_compuesto']?.toString(),
+      isla: parseIntNullable(json['isla']),
+      surtidor: parseIntNullable(json['surtidor']),
+      cara: parseIntNullable(json['cara']),
+      valor: parseIntNullable(json['valor']),
+      placa: json['placa']?.toString() ?? '',
+      codigoEds: json['codigo_eds']?.toString() ?? '',
+      estado: json['estado']?.toString() ?? '',
+      fecha: json['fecha']?.toString() ?? '',
+    );
+  }
+
+  /// Estado legible: 2=ACEPTADO, 3/4/5=RECHAZADO, otro=PENDIENTE
+  String get estadoTexto {
+    switch (estado) {
+      case '2':
+        return 'ACEPTADO';
+      case '3':
+      case '4':
+      case '5':
+        return 'RECHAZADO';
+      default:
+        return 'PENDIENTE';
+    }
+  }
+
+  bool get esAceptado => estado == '2';
+  bool get esRechazado => ['3', '4', '5'].contains(estado);
+  bool get esPendiente => !esAceptado && !esRechazado;
+}
+
+// ============================================================
+// GoPass - Venta disponible para pago
+// ============================================================
+
+class VentaGopass {
+  final int id;
+  final String fecha;
+  final double ventaTotal;
+  final int? consecutivo;
+  final String prefijo;
+  final String cara;
+  final double cantidad;
+  final double precioProducto;
+  final String descripcion;
+  final int? estadoGopass;
+
+  VentaGopass({
+    required this.id,
+    this.fecha = '',
+    this.ventaTotal = 0,
+    this.consecutivo,
+    this.prefijo = '',
+    this.cara = '',
+    this.cantidad = 0,
+    this.precioProducto = 0,
+    this.descripcion = '',
+    this.estadoGopass,
+  });
+
+  factory VentaGopass.fromJson(Map<String, dynamic> json) {
+    return VentaGopass(
+      id: parseInt(json['id']),
+      fecha: json['fecha']?.toString() ?? '',
+      ventaTotal: parseDouble(json['venta_total']),
+      consecutivo: parseIntNullable(json['consecutivo']),
+      prefijo: json['prefijo']?.toString() ?? '',
+      cara: json['cara']?.toString() ?? '',
+      cantidad: parseDouble(json['cantidad']),
+      precioProducto: parseDouble(json['precio_producto']),
+      descripcion: json['descripcion']?.toString() ?? '',
+      estadoGopass: parseIntNullable(json['estado_gopass']),
+    );
+  }
+
+  String get ventaTotalFormateada {
+    final str = ventaTotal.toInt().toString();
+    final buffer = StringBuffer();
+    int count = 0;
+    for (int i = str.length - 1; i >= 0; i--) {
+      buffer.write(str[i]);
+      count++;
+      if (count % 3 == 0 && i > 0) buffer.write('.');
+    }
+    return '\$${buffer.toString().split('').reversed.join('')}';
+  }
+}
+
+// ============================================================
+// Canastilla - Producto
+// ============================================================
+
+class ImpuestoProducto {
+  final int id;
+  final String descripcion;
+  final double porcentaje;
+  final double valor;
+  final bool ivaIncluido;
+
+  ImpuestoProducto({
+    this.id = 0,
+    this.descripcion = '',
+    this.porcentaje = 0,
+    this.valor = 0,
+    this.ivaIncluido = false,
+  });
+
+  factory ImpuestoProducto.fromJson(Map<String, dynamic> json) {
+    return ImpuestoProducto(
+      id: parseInt(json['impuesto_id'] ?? json['id']),
+      descripcion: json['descripcion']?.toString() ?? '',
+      porcentaje: parseDouble(json['porcentaje_valor'] ?? json['porcentaje']),
+      valor: parseDouble(json['valor']),
+      ivaIncluido: json['iva_incluido'] == true || json['iva_incluido'] == 'S',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'identificadorImpuesto': id,
+    'nombreImpuesto': descripcion,
+    'tipoImpuesto': ivaIncluido ? 'INCLUIDO' : 'ADICIONAL',
+    'valorImpAplicado': porcentaje,
+    'valorImpuestoAplicado': valor,
+  };
+}
+
+class IngredienteProducto {
+  final int id;
+  final String descripcion;
+  final double cantidad;
+  final double costo;
+  final double saldo;
+
+  IngredienteProducto({
+    this.id = 0,
+    this.descripcion = '',
+    this.cantidad = 0,
+    this.costo = 0,
+    this.saldo = 0,
+  });
+
+  factory IngredienteProducto.fromJson(Map<String, dynamic> json) {
+    return IngredienteProducto(
+      id: parseInt(json['ingredientes_id'] ?? json['id']),
+      descripcion: json['ing_descripcion'] ?? json['descripcion'] ?? '',
+      cantidad: parseDouble(json['cantidad']),
+      costo: parseDouble(json['ing_costo'] ?? json['costo']),
+      saldo: parseDouble(json['ing_saldo'] ?? json['saldo']),
+    );
+  }
+}
+
+class ProductoCanastilla {
+  final int id;
+  final String plu;
+  final String descripcion;
+  final double precio;
+  final int tipo;
+  final String estado;
+  final String unidadesMedida;
+  final double saldo;
+  final double costo;
+  final String codigoBarra;
+  final int categoriaId;
+  final String categoriaDescripcion;
+  final bool esCompuesto;
+  final List<ImpuestoProducto> impuestos;
+  final List<IngredienteProducto> ingredientes;
+
+  ProductoCanastilla({
+    required this.id,
+    this.plu = '',
+    this.descripcion = '',
+    this.precio = 0,
+    this.tipo = 0,
+    this.estado = 'A',
+    this.unidadesMedida = '',
+    this.saldo = 0,
+    this.costo = 0,
+    this.codigoBarra = '',
+    this.categoriaId = -1,
+    this.categoriaDescripcion = 'OTROS',
+    this.esCompuesto = false,
+    this.impuestos = const [],
+    this.ingredientes = const [],
+  });
+
+  factory ProductoCanastilla.fromJson(Map<String, dynamic> json) {
+    final impList = (json['impuestos'] as List?)
+        ?.map((e) => ImpuestoProducto.fromJson(e as Map<String, dynamic>))
+        .toList() ?? [];
+    final ingList = (json['ingredientes'] as List?)
+        ?.map((e) => IngredienteProducto.fromJson(e as Map<String, dynamic>))
+        .toList() ?? [];
+
+    return ProductoCanastilla(
+      id: parseInt(json['id']),
+      plu: json['plu']?.toString() ?? '',
+      descripcion: json['descripcion']?.toString() ?? '',
+      precio: parseDouble(json['precio']),
+      tipo: parseInt(json['tipo']),
+      estado: json['estado']?.toString() ?? 'A',
+      unidadesMedida: json['unidades_medida']?.toString() ?? '',
+      saldo: parseDouble(json['saldo']),
+      costo: parseDouble(json['costo']),
+      codigoBarra: json['codigo_barra']?.toString() ?? '',
+      categoriaId: parseInt(json['categoria_id']),
+      categoriaDescripcion: json['categoria_descripcion']?.toString() ?? 'OTROS',
+      esCompuesto: json['es_compuesto'] == true,
+      impuestos: impList,
+      ingredientes: ingList,
+    );
+  }
+
+  /// Calcula el impuesto total para una cantidad dada
+  double calcularImpuesto(int cantidad) {
+    double total = 0;
+    for (final imp in impuestos) {
+      if (imp.ivaIncluido) {
+        total += (precio * cantidad) - ((precio * cantidad) / (1 + imp.porcentaje / 100));
+      } else {
+        total += (precio * cantidad) * (imp.porcentaje / 100);
+      }
+    }
+    return total;
+  }
+
+  bool get tieneStock => saldo > 0;
+}
+
+class CategoriaCanastilla {
+  final int id;
+  final String descripcion;
+  final int totalProductos;
+
+  CategoriaCanastilla({
+    required this.id,
+    this.descripcion = '',
+    this.totalProductos = 0,
+  });
+
+  factory CategoriaCanastilla.fromJson(Map<String, dynamic> json) {
+    return CategoriaCanastilla(
+      id: parseInt(json['id']),
+      descripcion: json['descripcion']?.toString() ?? '',
+      totalProductos: parseInt(json['total_productos']),
+    );
+  }
+}
+
+class ItemCarrito {
+  final ProductoCanastilla producto;
+  int cantidad;
+
+  ItemCarrito({required this.producto, this.cantidad = 1});
+
+  double get subtotal => producto.precio * cantidad;
+  double get impuestoTotal => producto.calcularImpuesto(cantidad);
+  double get total => subtotal;
+
+  Map<String, dynamic> toDetalleJson() {
+    return {
+      'identificador_producto': producto.id,
+      'nombre_producto': producto.descripcion,
+      'identificacion_producto': producto.plu,
+      'cantidad_venta': cantidad.toDouble(),
+      'costo_producto': producto.costo,
+      'precio_producto': producto.precio,
+      'descuento_total': 0.0,
+      'subtotal_venta': subtotal,
+      'atributos': {
+        'categoriaId': producto.categoriaId,
+        'categoriaDescripcion': producto.categoriaDescripcion,
+        'tipo': producto.tipo,
+        'cortecia': false,
+        'base': subtotal - impuestoTotal,
+        'total': subtotal,
+        'precio_unitario': producto.precio,
+        'impuesto': impuestoTotal,
+        'precioProducto': producto.precio,
+      },
+      'ingredientes_aplicados': [],
+      'impuestos_aplicados': producto.impuestos.map((i) => i.toJson()).toList(),
+    };
+  }
+}
+
+class MedioPagoCanastilla {
+  final int id;
+  final String descripcion;
+  final String codigoExterno;
+  final String tipo;
+
+  MedioPagoCanastilla({
+    required this.id,
+    this.descripcion = '',
+    this.codigoExterno = '',
+    this.tipo = '',
+  });
+
+  factory MedioPagoCanastilla.fromJson(Map<String, dynamic> json) {
+    return MedioPagoCanastilla(
+      id: parseInt(json['id']),
+      descripcion: json['descripcion']?.toString() ?? '',
+      codigoExterno: json['codigo_externo']?.toString() ?? '',
+      tipo: json['tipo']?.toString() ?? '',
     );
   }
 }

@@ -320,6 +320,41 @@ class ApiConsultasService {
     }
   }
   
+  /// Enviar a Facturación Electrónica (7011) una venta resuelta.
+  /// Llama al endpoint /ventas/sin-resolver/resolver-y-enviar-fe
+  /// que registra en transmision + envía a 7011 + opcionalmente imprime.
+  Future<Map<String, dynamic>> enviarFEVentaSinResolver({
+    required int movimientoId,
+    required Map<String, dynamic> payloadFe,
+    bool imprimirDespues = true,
+  }) async {
+    try {
+      final body = {
+        'identificador_movimiento': movimientoId,
+        'payload_fe': payloadFe,
+        'imprimir_despues': imprimirDespues,
+      };
+      
+      print('[ApiConsultas] POST ventas/sin-resolver/resolver-y-enviar-fe: mov=$movimientoId, imprimir=$imprimirDespues');
+      
+      final response = await http.post(
+        Uri.parse('$_baseUrl/ventas/sin-resolver/resolver-y-enviar-fe'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 35));
+      
+      print('[ApiConsultas] FE Response ${response.statusCode}: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+      return {'ok': false, 'error_7011': 'HTTP ${response.statusCode}'};
+    } catch (e) {
+      print('[ApiConsultas] Error enviarFEVentaSinResolver: $e');
+      return {'ok': false, 'error_7011': 'Error: $e'};
+    }
+  }
+  
   /// Obtener medios de pago disponibles
   /// [traerEfectivo] = true para Status Pump, false para Ventas Sin Resolver
   Future<List<MedioPagoConsulta>> getMediosPago({bool traerEfectivo = true}) async {
@@ -1074,6 +1109,325 @@ class ApiConsultasService {
     } catch (e) {
       print('[ApiConsultas] Error imprimirVenta: $e');
       return {'exito': false, 'mensaje': 'Error: $e'};
+    }
+  }
+
+  // ============================================================
+  // GoPass - Estado de Pagos
+  // ============================================================
+
+  /// Obtener transacciones GoPass (últimos N días)
+  /// Java: GetTransacionesGoPassUseCase → fnc_recuperar_ventas_gopass(dias)
+  Future<List<TransaccionGopass>> obtenerTransaccionesGopass({int dias = 30}) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/gopass/transacciones?dias=$dias'),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final lista = data['transacciones'] as List? ?? [];
+        return lista.map((e) => TransaccionGopass.fromJson(e)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('[ApiConsultas] Error obtenerTransaccionesGopass: $e');
+      return [];
+    }
+  }
+
+  /// Imprimir factura GoPass
+  /// Java: ImpresionAdapter → POST localhost:8001/print-ticket/sales (con body de consumidor final)
+  Future<Map<String, dynamic>> imprimirGopass({
+    required int movimientoId,
+    String reportType = 'FACTURA',
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/gopass/imprimir'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'movimiento_id': movimientoId,
+          'report_type': reportType,
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      print('[ApiConsultas] Error imprimirGopass: $e');
+      return {'exito': false, 'mensaje': 'Error: $e'};
+    }
+  }
+
+  /// Obtener ventas disponibles para pago GoPass
+  Future<List<VentaGopass>> obtenerVentasGopass() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/gopass/ventas-disponibles'),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final lista = data['ventas'] as List? ?? [];
+        return lista.map((e) => VentaGopass.fromJson(e)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('[ApiConsultas] Error obtenerVentasGopass: $e');
+      return [];
+    }
+  }
+
+  /// Consultar placas GoPass para una venta
+  Future<List<PlacaGopass>> consultarPlacasGopass(int ventaId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/gopass/consultar-placas/$ventaId'),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['exito'] == true) {
+          final lista = data['placas'] as List? ?? [];
+          return lista.map((e) => PlacaGopass.fromJson(e)).toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      print('[ApiConsultas] Error consultarPlacasGopass: $e');
+      return [];
+    }
+  }
+
+  /// Procesar pago GoPass
+  Future<Map<String, dynamic>> procesarPagoGopass({
+    required int ventaId,
+    required String placa,
+    String tagGopass = '',
+    String nombreUsuario = '',
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/gopass/procesar-pago'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'venta_id': ventaId,
+          'placa': placa,
+          'tag_gopass': tagGopass,
+          'nombre_usuario': nombreUsuario,
+        }),
+      ).timeout(const Duration(seconds: 60));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      print('[ApiConsultas] Error procesarPagoGopass: $e');
+      return {'exito': false, 'mensaje': 'Error: $e'};
+    }
+  }
+
+  /// Consultar estado de un pago GoPass
+  /// Java: ConsultarEstadoPagoGoPassPort → POST localhost:7011/api/consultaEstado
+  Future<Map<String, dynamic>> consultarEstadoGopass({
+    required int idTransaccionGopass,
+    required int idVentaTerpel,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/gopass/consultar-estado'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'id_transaccion_gopass': idTransaccionGopass,
+          'id_venta_terpel': idVentaTerpel,
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      print('[ApiConsultas] Error consultarEstadoGopass: $e');
+      return {'exito': false, 'mensaje': 'Error: $e'};
+    }
+  }
+
+  // ============================================================
+  //  CANASTILLA
+  // ============================================================
+
+  /// Obtener productos de canastilla (paginado, con búsqueda y filtro)
+  Future<Map<String, dynamic>> obtenerProductosCanastilla({
+    int page = 1,
+    int pageSize = 50,
+    String? buscar,
+    int? categoriaId,
+  }) async {
+    try {
+      final params = <String, String>{
+        'page': page.toString(),
+        'page_size': pageSize.toString(),
+      };
+      if (buscar != null && buscar.isNotEmpty) params['buscar'] = buscar;
+      if (categoriaId != null && categoriaId > 0) {
+        params['categoria_id'] = categoriaId.toString();
+      }
+
+      final uri = Uri.parse('$_baseUrl/canastilla/productos')
+          .replace(queryParameters: params);
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'total': 0, 'productos': []};
+    } catch (e) {
+      print('[ApiConsultas] Error obtenerProductosCanastilla: $e');
+      return {'total': 0, 'productos': []};
+    }
+  }
+
+  /// Obtener categorías de canastilla
+  Future<List<CategoriaCanastilla>> obtenerCategoriasCanastilla() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$_baseUrl/canastilla/categorias'))
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        final list = data['categorias'] as List? ?? [];
+        return list
+            .map((e) =>
+                CategoriaCanastilla.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      print('[ApiConsultas] Error obtenerCategoriasCanastilla: $e');
+      return [];
+    }
+  }
+
+  /// Obtener medios de pago disponibles
+  Future<List<MedioPagoCanastilla>> obtenerMediosPagoCanastilla() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$_baseUrl/canastilla/medios-pago'))
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        final list = data['medios_pago'] as List? ?? [];
+        return list
+            .map((e) =>
+                MedioPagoCanastilla.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      print('[ApiConsultas] Error obtenerMediosPagoCanastilla: $e');
+      return [];
+    }
+  }
+
+  /// Procesar venta de canastilla
+  Future<Map<String, dynamic>> procesarVentaCanastilla(
+      Map<String, dynamic> body) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/canastilla/procesar-venta'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode(body),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      return json.decode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      print('[ApiConsultas] Error procesarVentaCanastilla: $e');
+      return {'exito': false, 'mensaje': 'Error: $e'};
+    }
+  }
+
+  /// Obtener historial de ventas canastilla
+  Future<Map<String, dynamic>> obtenerHistorialCanastilla({
+    required String fechaInicio,
+    required String fechaFin,
+    String? promotor,
+  }) async {
+    try {
+      final params = <String, String>{
+        'fecha_inicio': fechaInicio,
+        'fecha_fin': fechaFin,
+      };
+      if (promotor != null && promotor.isNotEmpty) {
+        params['promotor'] = promotor;
+      }
+
+      final uri = Uri.parse('$_baseUrl/canastilla/historial')
+          .replace(queryParameters: params);
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'total': 0, 'ventas': []};
+    } catch (e) {
+      print('[ApiConsultas] Error obtenerHistorialCanastilla: $e');
+      return {'total': 0, 'ventas': []};
+    }
+  }
+
+  /// Imprimir venta canastilla
+  /// Java: StoreConfirmarViewController.impresionVenta() → flow_type: CONFIRMAR_STORE
+  Future<Map<String, dynamic>> imprimirCanastilla(int movimientoId,
+      {String reportType = 'VENTA', Map<String, dynamic>? cliente}) async {
+    try {
+      final body = {
+        'movimiento_id': movimientoId,
+        'report_type': reportType,
+        if (cliente != null) 'cliente': cliente,
+      };
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/canastilla/imprimir'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode(body),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      return json.decode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      print('[ApiConsultas] Error imprimirCanastilla: $e');
+      return {'exito': false, 'mensaje': 'Error: $e'};
+    }
+  }
+
+  /// Obtener configuración de facturación POS + isDefaultFe
+  /// Java: Main.getParametroCoreBoolean("FACTURACION", false) + FacturacionElectronicaDao.isDefaultFe()
+  Future<Map<String, bool>> obtenerConfigFacturacion() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$_baseUrl/canastilla/config-facturacion'))
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        return {
+          'facturacion_pos': data['facturacion_pos'] == true,
+          'is_default_fe': data['is_default_fe'] == true,
+        };
+      }
+      return {'facturacion_pos': false, 'is_default_fe': false};
+    } catch (e) {
+      print('[ApiConsultas] Error obtenerConfigFacturacion: $e');
+      return {'facturacion_pos': false, 'is_default_fe': false};
     }
   }
 }

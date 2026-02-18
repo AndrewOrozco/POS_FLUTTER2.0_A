@@ -13,6 +13,17 @@ class AppTerpelVentaTerminada {
   AppTerpelVentaTerminada({required this.cara, required this.monto, required this.medioPago});
 }
 
+/// Evento emitido cuando CUALQUIER venta termina de despachar (PEOT/FEOT)
+/// Usado para disparar la impresión automática del ticket
+class VentaTerminada {
+  final int cara;
+  final double monto;
+  final DateTime timestamp;
+  
+  VentaTerminada({required this.cara, required this.monto})
+      : timestamp = DateTime.now();
+}
+
 /// Placa pendiente de asignar cuando el surtidor comience a despachar
 class _PlacaPendiente {
   final String placa;
@@ -47,6 +58,11 @@ class StatusPumpProvider extends ChangeNotifier {
   final StreamController<AppTerpelVentaTerminada> _appTerpelTerminadaController =
       StreamController<AppTerpelVentaTerminada>.broadcast();
   Stream<AppTerpelVentaTerminada> get appTerpelTerminadaStream => _appTerpelTerminadaController.stream;
+
+  // Stream para notificar cuando CUALQUIER venta termina (para impresión automática)
+  final StreamController<VentaTerminada> _ventaTerminadaController =
+      StreamController<VentaTerminada>.broadcast();
+  Stream<VentaTerminada> get ventaTerminadaStream => _ventaTerminadaController.stream;
 
   // Getters
   Map<int, SurtidorEstado> get surtidores => Map.unmodifiable(_surtidores);
@@ -95,8 +111,20 @@ class StatusPumpProvider extends ChangeNotifier {
       if (estado.estado == EstadoSurtidor.idle || 
           estado.estado == EstadoSurtidor.terminatedPEOT ||
           estado.estado == EstadoSurtidor.terminatedFEOT) {
-        // Antes de remover, verificar si tenía APP TERPEL asignado
         final existente = _surtidores[estado.cara];
+        
+        // Emitir evento de venta terminada para TODAS las ventas (impresión automática)
+        if (estado.estado == EstadoSurtidor.terminatedPEOT || 
+            estado.estado == EstadoSurtidor.terminatedFEOT) {
+          final montoVenta = existente?.monto ?? 0.0;
+          print('[StatusPumpProvider] Venta terminada en cara ${estado.cara}, monto: $montoVenta');
+          _ventaTerminadaController.add(VentaTerminada(
+            cara: estado.cara,
+            monto: montoVenta,
+          ));
+        }
+        
+        // Verificar si tenía APP TERPEL asignado
         if (existente != null && 
             existente.medioPagoEspecial != null &&
             existente.medioPagoEspecial!.toUpperCase().contains('APP TERPEL') &&
@@ -226,6 +254,7 @@ class StatusPumpProvider extends ChangeNotifier {
     _estadoSubscription?.cancel();
     _connectionSubscription?.cancel();
     _appTerpelTerminadaController.close();
+    _ventaTerminadaController.close();
     _socketService.dispose();
     super.dispose();
   }

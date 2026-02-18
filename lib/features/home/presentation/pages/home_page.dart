@@ -10,6 +10,8 @@ import '../widgets/ventas_fe_banner_widget.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/api_consultas_service.dart';
 import '../../../../core/services/payment_websocket_service.dart';
+import '../../../../core/services/notification_websocket_service.dart';
+import '../../../../core/widgets/top_notification.dart';
 import '../../../../core/providers/session_provider.dart';
 import '../../../status_pump/status_pump.dart';
 import '../../../status_pump/presentation/providers/status_pump_provider.dart';
@@ -28,10 +30,14 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   StreamSubscription<AppTerpelVentaTerminada>? _appTerpelSubscription;
   StreamSubscription<PaymentNotification>? _paymentWsSubscription;
+  StreamSubscription<VentaTerminada>? _ventaTerminadaSubscription;
+  StreamSubscription<BackendNotification>? _backendNotifSubscription;
   final ApiConsultasService _apiService = ApiConsultasService();
   /// Caras gestionadas → monto al momento de guardar.
   /// Cuando el monto baja (venta nueva), se limpia automáticamente.
   final Map<int, double> _carasGestionadasMonto = {};
+  /// Caras que ya están en proceso de impresión (evitar duplicados)
+  final Set<int> _carasImprimiendo = {};
 
   @override
   void initState() {
@@ -43,9 +49,21 @@ class _HomePageState extends State<HomePage> {
         _onAppTerpelVentaTerminada(evento);
       });
 
+      // Escuchar cuando CUALQUIER venta termina → impresión automática
+      _ventaTerminadaSubscription = provider.ventaTerminadaStream.listen((evento) {
+        _onVentaTerminada(evento);
+      });
+
       // Escuchar notificaciones de pago del orquestador via WebSocket
       _paymentWsSubscription = PaymentWebSocketService().notificationStream.listen((notification) {
         _onPaymentNotification(notification);
+      });
+
+      // Escuchar notificaciones del backend Python (errores 7011, impresión, etc.)
+      final notifService = NotificationWebSocketService();
+      notifService.connect();
+      _backendNotifSubscription = notifService.notificationStream.listen((notif) {
+        _onBackendNotification(notif);
       });
     });
   }
@@ -54,6 +72,8 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _appTerpelSubscription?.cancel();
     _paymentWsSubscription?.cancel();
+    _ventaTerminadaSubscription?.cancel();
+    _backendNotifSubscription?.cancel();
     super.dispose();
   }
 
@@ -193,6 +213,43 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// Manejar notificaciones del backend Python (errores 7011, impresión, etc.)
+  /// Se muestra como notificación tipo Steam (no bloqueante, arriba derecha)
+  void _onBackendNotification(BackendNotification notif) {
+    if (!mounted) return;
+
+    print('[HomePage] Backend notificación: [${notif.type}] ${notif.title} - ${notif.message}');
+
+    // Mapear severity a tipo de notificación
+    NotificationType type;
+    switch (notif.severity) {
+      case 'success':
+        type = NotificationType.success;
+        break;
+      case 'warning':
+        type = NotificationType.warning;
+        break;
+      case 'error':
+        type = NotificationType.error;
+        break;
+      default:
+        type = NotificationType.info;
+    }
+
+    // Duración: errores/warnings duran más para que el promotor los vea
+    final duration = notif.isError
+        ? const Duration(seconds: 10)
+        : const Duration(seconds: 5);
+
+    TopNotification.show(
+      context,
+      message: notif.title,
+      subtitle: notif.message,
+      type: type,
+      duration: duration,
+    );
+  }
+
   /// Cuando la venta con APP TERPEL termina de despachar (flujo Status Pump).
   /// NO envía al orquestador: ms-lazoexpress/lazoexpress ya lo hace automáticamente.
   /// Solo limpia el flag de ventas_curso y muestra notificación informativa.
@@ -219,6 +276,111 @@ class _HomePageState extends State<HomePage> {
         duration: const Duration(seconds: 5),
       ),
     );
+  }
+
+  /// Cuando CUALQUIER venta termina de despachar (PEOT/FEOT).
+  /// Dispara impresión automática: espera a que el backend cree el movimiento
+  /// en ct_movimientos, obtiene el movimiento_id, y envía a imprimir.
+  /// Replica el comportamiento de Java: ControlImpresion.java
+  void _onVentaTerminada(VentaTerminada evento) async {
+    print('[HomePage] Venta terminada en cara ${evento.cara}, monto: ${evento.monto}');
+    
+    // Evitar impresión duplicada si la misma cara ya está en proceso
+    if (_carasImprimiendo.contains(evento.cara)) {
+      print('[HomePage] Cara ${evento.cara} ya está en proceso de impresión, ignorando');
+      return;
+    }
+    _carasImprimiendo.add(evento.cara);
+    
+    try {
+      await _intentarImprimirVenta(evento.cara);
+    } finally {
+      _carasImprimiendo.remove(evento.cara);
+    }
+  }
+
+  /// Intenta obtener el movimiento_id de la venta y enviarla a imprimir.
+  /// Reintenta hasta 4 veces con delays crecientes para dar tiempo al backend
+  /// de crear el movimiento en ct_movimientos (similar a ControlImpresion de Java).
+  Future<void> _intentarImprimirVenta(int cara) async {
+    const maxReintentos = 4;
+    const delays = [5, 8, 12, 15]; // segundos entre reintentos
+    
+    for (int intento = 0; intento < maxReintentos; intento++) {
+      // Esperar antes del intento (dar tiempo al backend)
+      final delay = delays[intento];
+      print('[HomePage] Impresión auto cara $cara: esperando ${delay}s (intento ${intento + 1}/$maxReintentos)');
+      await Future.delayed(Duration(seconds: delay));
+      
+      if (!mounted) return;
+      
+      try {
+        // Obtener el movimiento_id para esta cara
+        final ventaActiva = await _apiService.getVentaActivaPorCara(cara);
+        
+        if (ventaActiva.found && ventaActiva.movimientoId != null) {
+          // Solo imprimir desde Flutter cuando statusPump=true (factura_electronica=YES)
+          // Cuando statusPump=false, LazoExpress ya se encarga de imprimir directamente
+          if (!ventaActiva.statusPump) {
+            print('[HomePage] statusPump=false → LazoExpress imprime, Flutter no hace nada');
+            return;
+          }
+
+          print('[HomePage] statusPump=true → imprimiendo vía backend Python, movimiento_id=${ventaActiva.movimientoId}');
+          
+          // Enviar a imprimir
+          final resultado = await _apiService.imprimirVenta(
+            movimientoId: ventaActiva.movimientoId!,
+          );
+          
+          if (!mounted) return;
+          
+          if (resultado['exito'] == true) {
+            // Si el guard bloqueó la impresión (GoPass/AppTerpel pendiente de aprobación),
+            // no mostrar notificación de éxito — la impresión se hará después del callback.
+            if (resultado['pendiente_orquestador'] == true) {
+              print('[HomePage] Impresión bloqueada: pago orquestador pendiente para cara $cara');
+              return;
+            }
+            print('[HomePage] Impresión automática exitosa para cara $cara');
+            TopNotification.show(
+              context,
+              message: 'Ticket impreso - Cara $cara',
+              type: NotificationType.success,
+              duration: const Duration(seconds: 4),
+            );
+            return; // Éxito, salir del loop
+          } else {
+            print('[HomePage] Impresión auto falló: ${resultado['mensaje']}');
+            if (intento == maxReintentos - 1 && mounted) {
+              TopNotification.show(
+                context,
+                message: 'Error imprimiendo cara $cara',
+                subtitle: resultado['mensaje']?.toString() ?? 'Error desconocido',
+                type: NotificationType.error,
+                duration: const Duration(seconds: 8),
+              );
+            }
+          }
+        } else {
+          print('[HomePage] Impresión auto: no se encontró movimiento para cara $cara (intento ${intento + 1})');
+        }
+      } catch (e) {
+        print('[HomePage] Error en impresión automática cara $cara: $e');
+      }
+    }
+    
+    // Agoté reintentos sin éxito
+    print('[HomePage] Impresión auto: agotados reintentos para cara $cara');
+    if (mounted) {
+      TopNotification.show(
+        context,
+        message: 'No se pudo imprimir cara $cara',
+        subtitle: 'Agotados los reintentos. Puede imprimir desde historial.',
+        type: NotificationType.warning,
+        duration: const Duration(seconds: 8),
+      );
+    }
   }
 
   void _onMediosPago(int cara) {

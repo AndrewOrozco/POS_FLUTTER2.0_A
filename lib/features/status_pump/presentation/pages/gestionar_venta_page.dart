@@ -546,7 +546,52 @@ class _GestionarVentaPageState extends State<GestionarVentaPage> {
                   icon: Icons.receipt_long,
                   valor: _facturacionElectronica,
                   color: Colors.blue,
-                  onChanged: (val) => setState(() => _facturacionElectronica = val ?? false),
+                  onChanged: (val) {
+                    if (val == true) {
+                      // Mostrar diálogo de confirmación al activar FE
+                      showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          icon: const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 48),
+                          title: const Text('¿Activar Facturación Electrónica?', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                          content: const Text(
+                            'Al guardar con Facturación Electrónica, los datos del cliente y la venta no podrán ser modificados.\n\n¿Está seguro que desea continuar?',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 15),
+                          ),
+                          actionsAlignment: MainAxisAlignment.center,
+                          actions: [
+                            OutlinedButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.grey.shade700,
+                                side: BorderSide(color: Colors.grey.shade400),
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              ),
+                              child: const Text('Cancelar'),
+                            ),
+                            const SizedBox(width: 12),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              ),
+                              child: const Text('Sí, activar FE'),
+                            ),
+                          ],
+                        ),
+                      ).then((confirmed) {
+                        if (confirmed == true) {
+                          setState(() => _facturacionElectronica = true);
+                        }
+                      });
+                    } else {
+                      setState(() => _facturacionElectronica = false);
+                    }
+                  },
                   habilitado: true, // FE siempre disponible, incluso para consumidor final
                 ),
               ),
