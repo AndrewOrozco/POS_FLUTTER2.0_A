@@ -735,14 +735,16 @@ class ApiConsultasService {
 
   /// Consultar lectura pendiente de identificador (Ibutton/RFID) para una cara.
   /// Usa long-polling: espera hasta [segundosEspera] segundos por una lectura.
+  /// [tipo]: 'turno' (promotorId > 0, empleado) o 'rumbo' (promotorId <= 0, vehículo)
   /// Retorna {medio, serial, promotor_id, promotor_nombre} o null si no hay.
   Future<Map<String, dynamic>?> getLecturaIdentificadorRumbo({
     required int cara,
     int segundosEspera = 10,
+    String tipo = 'rumbo',
   }) async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/rumbo/lectura-identificador/$cara?esperar=$segundosEspera'),
+        Uri.parse('$_baseUrl/rumbo/lectura-identificador/$cara?esperar=$segundosEspera&tipo=$tipo'),
       ).timeout(Duration(seconds: segundosEspera + 5));
 
       if (response.statusCode == 200) {
@@ -759,10 +761,10 @@ class ApiConsultasService {
   }
 
   /// Limpiar lectura pendiente de una cara
-  Future<void> limpiarLecturaIdentificadorRumbo(int cara) async {
+  Future<void> limpiarLecturaIdentificadorRumbo(int cara, {String tipo = 'rumbo'}) async {
     try {
       await http.delete(
-        Uri.parse('$_baseUrl/rumbo/lectura-identificador/$cara'),
+        Uri.parse('$_baseUrl/rumbo/lectura-identificador/$cara?tipo=$tipo'),
       ).timeout(const Duration(seconds: 5));
     } catch (e) {
       print('[ApiConsultas] Error limpiarLecturaIdentificadorRumbo: $e');
@@ -906,11 +908,12 @@ class ApiConsultasService {
     }
   }
 
-  /// Validar un promotor por identificación y PIN opcional
-  Future<Map<String, dynamic>> validarPromotor(String identificacion, {String? pin}) async {
+  /// Validar un promotor por identificación y/o personas_id, con PIN opcional
+  Future<Map<String, dynamic>> validarPromotor(String identificacion, {String? pin, int? personasId}) async {
     try {
       final body = <String, dynamic>{'identificacion': identificacion};
       if (pin != null && pin.isNotEmpty) body['pin'] = pin;
+      if (personasId != null && personasId > 0) body['personas_id'] = personasId;
 
       final response = await http.post(
         Uri.parse('$_baseUrl/turnos/validar-promotor'),
@@ -1428,6 +1431,679 @@ class ApiConsultasService {
     } catch (e) {
       print('[ApiConsultas] Error obtenerConfigFacturacion: $e');
       return {'facturacion_pos': false, 'is_default_fe': false};
+    }
+  }
+
+  // ============================================================
+  //  MARKET (KCO / Kiosco)
+  // ============================================================
+
+  /// Obtener productos de Market (paginado, con búsqueda y filtro)
+  Future<Map<String, dynamic>> obtenerProductosMarket({
+    int page = 1,
+    int pageSize = 50,
+    String? buscar,
+    int? categoriaId,
+  }) async {
+    try {
+      final params = <String, String>{
+        'page': page.toString(),
+        'page_size': pageSize.toString(),
+      };
+      if (buscar != null && buscar.isNotEmpty) params['buscar'] = buscar;
+      if (categoriaId != null && categoriaId > 0) {
+        params['categoria_id'] = categoriaId.toString();
+      }
+
+      final uri = Uri.parse('$_baseUrl/market/productos')
+          .replace(queryParameters: params);
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'total': 0, 'productos': []};
+    } catch (e) {
+      print('[ApiConsultas] Error obtenerProductosMarket: $e');
+      return {'total': 0, 'productos': []};
+    }
+  }
+
+  /// Obtener categorías de Market
+  Future<List<CategoriaCanastilla>> obtenerCategoriasMarket() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$_baseUrl/market/categorias'))
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        final list = data['categorias'] as List? ?? [];
+        return list
+            .map((e) =>
+                CategoriaCanastilla.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      print('[ApiConsultas] Error obtenerCategoriasMarket: $e');
+      return [];
+    }
+  }
+
+  /// Obtener medios de pago para Market
+  Future<List<MedioPagoCanastilla>> obtenerMediosPagoMarket() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$_baseUrl/market/medios-pago'))
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        final list = data['medios_pago'] as List? ?? [];
+        return list
+            .map((e) =>
+                MedioPagoCanastilla.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      print('[ApiConsultas] Error obtenerMediosPagoMarket: $e');
+      return [];
+    }
+  }
+
+  /// Procesar venta de Market (KCO)
+  Future<Map<String, dynamic>> procesarVentaMarket(
+      Map<String, dynamic> body) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/market/procesar-venta'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode(body),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      return json.decode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      print('[ApiConsultas] Error procesarVentaMarket: $e');
+      return {'exito': false, 'mensaje': 'Error: $e'};
+    }
+  }
+
+  /// Obtener historial de ventas Market
+  Future<Map<String, dynamic>> obtenerHistorialMarket({
+    required String fechaInicio,
+    required String fechaFin,
+    String? promotor,
+  }) async {
+    try {
+      final params = <String, String>{
+        'fecha_inicio': fechaInicio,
+        'fecha_fin': fechaFin,
+      };
+      if (promotor != null && promotor.isNotEmpty) {
+        params['promotor'] = promotor;
+      }
+
+      final uri = Uri.parse('$_baseUrl/market/historial')
+          .replace(queryParameters: params);
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'total': 0, 'ventas': []};
+    } catch (e) {
+      print('[ApiConsultas] Error obtenerHistorialMarket: $e');
+      return {'total': 0, 'ventas': []};
+    }
+  }
+
+  /// Imprimir venta Market
+  Future<Map<String, dynamic>> imprimirMarket(int movimientoId,
+      {String reportType = 'VENTA', Map<String, dynamic>? cliente}) async {
+    try {
+      final body = {
+        'movimiento_id': movimientoId,
+        'report_type': reportType,
+        if (cliente != null) 'cliente': cliente,
+      };
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/market/imprimir'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode(body),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      return json.decode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      print('[ApiConsultas] Error imprimirMarket: $e');
+      return {'exito': false, 'mensaje': 'Error: $e'};
+    }
+  }
+
+  /// Obtener configuración de facturación para Market
+  Future<Map<String, bool>> obtenerConfigFacturacionMarket() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$_baseUrl/market/config-facturacion'))
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        return {
+          'facturacion_pos': data['facturacion_pos'] == true,
+          'is_default_fe': data['is_default_fe'] == true,
+        };
+      }
+      return {'facturacion_pos': false, 'is_default_fe': false};
+    } catch (e) {
+      print('[ApiConsultas] Error obtenerConfigFacturacionMarket: $e');
+      return {'facturacion_pos': false, 'is_default_fe': false};
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════
+  //  PLACA — Pre-Autorización de Venta
+  // ══════════════════════════════════════════════════════════
+
+  /// Obtener mangueras disponibles para pre-autorización
+  /// tipo: 'normal' (excluye GLP) o 'glp' (solo GLP)
+  Future<List<Map<String, dynamic>>> getManguerasPlaca({String tipo = 'normal'}) async {
+    try {
+      final response = await http
+          .get(Uri.parse('$_baseUrl/placa/mangueras?tipo=$tipo'))
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as List;
+        return data.cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (e) {
+      print('[ApiConsultas] Error getManguerasPlaca: $e');
+      return [];
+    }
+  }
+
+  /// Verificar si una cara tiene pre-autorización activa
+  Future<Map<String, dynamic>> verificarCaraUsada(int cara) async {
+    try {
+      final response = await http
+          .get(Uri.parse('$_baseUrl/placa/caras-usadas?cara=$cara'))
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'cara': cara, 'tiene_preautorizacion': false};
+    } catch (e) {
+      print('[ApiConsultas] Error verificarCaraUsada: $e');
+      return {'cara': cara, 'tiene_preautorizacion': false};
+    }
+  }
+
+  /// Crear pre-autorización de venta por placa
+  Future<Map<String, dynamic>> preAutorizarPlaca({
+    required int surtidor,
+    required int cara,
+    required int manguera,
+    required int grado,
+    required String placa,
+    required String odometro,
+    int? promotorId,
+    // ── Clientes Propios (iButton) ──
+    double? saldo,
+    String? tipoCupo,
+    String? documentoCliente,
+    String? nombreCliente,
+    String? medioAutorizacion,
+    String? serialDispositivo,
+    double? productoPrecio,
+  }) async {
+    try {
+      final body = {
+        'surtidor': surtidor,
+        'cara': cara,
+        'manguera': manguera,
+        'grado': grado,
+        'placa': placa,
+        'odometro': odometro,
+        if (promotorId != null) 'promotor_id': promotorId,
+        // Clientes Propios fields
+        if (saldo != null) 'saldo': saldo,
+        if (tipoCupo != null) 'tipo_cupo': tipoCupo,
+        if (documentoCliente != null) 'documento_cliente': documentoCliente,
+        if (nombreCliente != null) 'nombre_cliente': nombreCliente,
+        if (medioAutorizacion != null) 'medio_autorizacion': medioAutorizacion,
+        if (serialDispositivo != null) 'serial_dispositivo': serialDispositivo,
+        if (productoPrecio != null) 'producto_precio': productoPrecio,
+      };
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/placa/pre-autorizar'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode(body),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      return json.decode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      print('[ApiConsultas] Error preAutorizarPlaca: $e');
+      return {'exito': false, 'mensaje': 'Error: $e'};
+    }
+  }
+
+  /// Validar placa en SICOM para GLP
+  /// Replica ClienteFacade.consultaVehiculoSicom()
+  /// GET /placa/validar-sicom/{placa}
+  Future<Map<String, dynamic>> validarPlacaSicom(String placa) async {
+    try {
+      final response = await http
+          .get(Uri.parse('$_baseUrl/placa/validar-sicom/${Uri.encodeComponent(placa.trim().toUpperCase())}'))
+          .timeout(const Duration(seconds: 15));
+      return json.decode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      print('[ApiConsultas] Error validarPlacaSicom: $e');
+      return {'exito': false, 'mensaje': 'Error consultando SICOM: $e'};
+    }
+  }
+
+  /// Validar cupo de cliente propio vía iButton (Clientes Propios)
+  /// Llama al proxy que consulta :7001/api/cupos/validar-cupo/v1
+  Future<Map<String, dynamic>> validarCupoIButton({
+    required String serial,
+    required int cara,
+    int? promotorId,
+  }) async {
+    try {
+      final body = {
+        'serial': serial,
+        'cara': cara,
+        if (promotorId != null) 'promotor_id': promotorId,
+      };
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/placa/validar-cupo-ibutton'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode(body),
+          )
+          .timeout(const Duration(seconds: 20));
+
+      return json.decode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      print('[ApiConsultas] Error validarCupoIButton: $e');
+      return {'exito': false, 'mensaje': 'Error: $e', 'data': null};
+    }
+  }
+
+  /// Polling: obtener última notificación iButton del hardware
+  /// Retorna {exito, mensaje, data} o {exito: false} si no hay notificación
+  Future<Map<String, dynamic>> getUltimaNotificacionIButton() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$_baseUrl/placa/ultima-notificacion-ibutton'))
+          .timeout(const Duration(seconds: 5));
+      return json.decode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      return {'exito': false, 'mensaje': null, 'data': null};
+    }
+  }
+
+  /// Consumir/limpiar la notificación iButton después de procesarla
+  Future<void> consumirNotificacionIButton() async {
+    try {
+      await http
+          .delete(Uri.parse('$_baseUrl/placa/ultima-notificacion-ibutton'))
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {}
+  }
+
+  /// Obtener ventas del turno actual que aún no han sido fidelizadas
+  Future<Map<String, dynamic>> obtenerVentasPendientesFidelizacion() async {
+    try {
+      // Obtener ventas del turno actual y filtrar las no fidelizadas
+      final response = await http
+          .get(Uri.parse('$_baseUrl/ventas/historial?limite=50'))
+          .timeout(const Duration(seconds: 15));
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      final ventas = List<Map<String, dynamic>>.from(data['ventas'] ?? []);
+
+      // Filtrar solo las no fidelizadas
+      final pendientes = ventas.where((v) {
+        return v['fidelizada'] != true && v['fidelizada'] != 'S';
+      }).toList();
+
+      return {'exito': true, 'ventas': pendientes};
+    } catch (e) {
+      return {'exito': false, 'ventas': [], 'mensaje': 'Error: $e'};
+    }
+  }
+
+  // ─── Fidelizaciones Retenidas ───
+  Future<Map<String, dynamic>> obtenerFidelizacionesRetenidas() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$_baseUrl/fidelizacion/retenidas'))
+          .timeout(const Duration(seconds: 15));
+      return json.decode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      return {'exito': false, 'retenidas': [], 'error': 'Error: $e'};
+    }
+  }
+
+  // ─── Validación Bono / Voucher ───
+  Future<Map<String, dynamic>> validarBono({
+    required String codigoBono,
+    int valorBono = 0,
+  }) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/fidelizacion/validar-bono'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({
+              'codigo_bono': codigoBono,
+              'valor_bono': valorBono,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+      return json.decode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      return {'exito': false, 'mensaje': 'Error: $e'};
+    }
+  }
+
+  // ============================================================
+  // CONFIGURACIÓN - DISPOSITIVOS
+  // ============================================================
+
+  /// Obtener todos los dispositivos configurados
+  Future<List<Map<String, dynamic>>> getDispositivos() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/configuracion/dispositivos'),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final items = data['dispositivos'] as List<dynamic>;
+        return items.map((d) => Map<String, dynamic>.from(d)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('[ApiConsultas] Error getDispositivos: $e');
+      return [];
+    }
+  }
+
+  /// Crear un nuevo dispositivo
+  Future<bool> crearDispositivo({
+    required String tipos,
+    required String conector,
+    required String interfaz,
+    String estado = 'A',
+    Map<String, dynamic>? atributos,
+  }) async {
+    try {
+      final body = {
+        'tipos': tipos,
+        'conector': conector,
+        'interfaz': interfaz,
+        'estado': estado,
+        if (atributos != null) 'atributos': atributos,
+      };
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/configuracion/dispositivos'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 10));
+
+      final data = json.decode(response.body);
+      return data['success'] == true;
+    } catch (e) {
+      print('[ApiConsultas] Error crearDispositivo: $e');
+      return false;
+    }
+  }
+
+  /// Editar un dispositivo existente
+  Future<bool> editarDispositivo({
+    required int id,
+    String? tipos,
+    String? conector,
+    String? interfaz,
+    String? estado,
+    Map<String, dynamic>? atributos,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        if (tipos != null) 'tipos': tipos,
+        if (conector != null) 'conector': conector,
+        if (interfaz != null) 'interfaz': interfaz,
+        if (estado != null) 'estado': estado,
+        if (atributos != null) 'atributos': atributos,
+      };
+
+      final response = await http.put(
+        Uri.parse('$_baseUrl/configuracion/dispositivos/$id'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 10));
+
+      final data = json.decode(response.body);
+      return data['success'] == true;
+    } catch (e) {
+      print('[ApiConsultas] Error editarDispositivo: $e');
+      return false;
+    }
+  }
+
+  /// Eliminar un dispositivo por ID
+  Future<bool> eliminarDispositivo(int id) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/configuracion/dispositivos/$id'),
+      ).timeout(const Duration(seconds: 10));
+
+      final data = json.decode(response.body);
+      return data['success'] == true;
+    } catch (e) {
+      print('[ApiConsultas] Error eliminarDispositivo: $e');
+      return false;
+    }
+  }
+
+  // ============================================================
+  // CONFIGURACIÓN - TAG RFID
+  // ============================================================
+
+  /// Obtener lista de usuarios con su tag RFID
+  Future<List<Map<String, dynamic>>> getUsuariosTag() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/configuracion/usuarios-tag'),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final items = data['usuarios'] as List<dynamic>;
+        return items.map((u) => Map<String, dynamic>.from(u)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('[ApiConsultas] Error getUsuariosTag: $e');
+      return [];
+    }
+  }
+
+  /// Registrar (asignar) un tag RFID a un usuario
+  Future<Map<String, dynamic>> registrarTag({
+    required String identificacion,
+    required String tag,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/configuracion/registrar-tag'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'identificacion': identificacion,
+          'tag': tag,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      return json.decode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      print('[ApiConsultas] Error registrarTag: $e');
+      return {'success': false, 'message': 'Error de conexión: $e'};
+    }
+  }
+
+  /// Obtener lectura pendiente del tag RFID del hardware
+  Future<String?> getLecturaTag() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/configuracion/lectura-tag'),
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['disponible'] == true) {
+          return data['lectura']?.toString();
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // ============================================================
+  // CONFIGURACIÓN - PARAMETRIZACIONES
+  // ============================================================
+
+  /// Obtener parámetros del POS (tipo_autorizacion, placa obligatoria, etc.)
+  Future<Map<String, dynamic>> getParametrizaciones() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/configuracion/parametrizaciones'),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {};
+    } catch (e) {
+      print('[ApiConsultas] Error getParametrizaciones: $e');
+      return {};
+    }
+  }
+
+  /// Actualizar parámetros del POS
+  Future<bool> updateParametrizaciones(Map<String, String> params) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$_baseUrl/configuracion/parametrizaciones'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(params),
+      ).timeout(const Duration(seconds: 10));
+
+      final data = json.decode(response.body);
+      return data['success'] == true;
+    } catch (e) {
+      print('[ApiConsultas] Error updateParametrizaciones: $e');
+      return false;
+    }
+  }
+
+  // ============================================================
+  // SINCRONIZACIÓN
+  // ============================================================
+
+  /// Ejecutar sincronización (total o por módulo)
+  Future<Map<String, dynamic>> ejecutarSincronizacion(
+    String tipo, {
+    int? tipoNotificacion,
+  }) async {
+    try {
+      final body = <String, dynamic>{'tipo': tipo};
+      if (tipoNotificacion != null) {
+        body['tipo_notificacion'] = tipoNotificacion;
+      }
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/configuracion/sincronizacion/ejecutar'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 120));
+
+      return json.decode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      print('[ApiConsultas] Error ejecutarSincronizacion: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Obtener historial de sincronizaciones
+  Future<List<Map<String, dynamic>>> getHistorialSincronizacion() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/configuracion/sincronizacion/historial'),
+      ).timeout(const Duration(seconds: 10));
+
+      final data = json.decode(response.body);
+      if (data['success'] == true && data['historial'] != null) {
+        return (data['historial'] as List)
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      print('[ApiConsultas] Error getHistorialSincronizacion: $e');
+      return [];
+    }
+  }
+
+  // ═══════════════════════════════════════
+  // IMPRESORA
+  // ═══════════════════════════════════════
+
+  /// Obtener IP de la impresora configurada
+  Future<String?> getIpImpresora() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/configuracion/impresora'),
+      ).timeout(const Duration(seconds: 5));
+
+      final data = json.decode(response.body);
+      if (data['success'] == true) {
+        return data['ip'];
+      }
+      return null;
+    } catch (e) {
+      print('[ApiConsultas] Error getIpImpresora: $e');
+      return null;
+    }
+  }
+
+  /// Guardar IP de la impresora
+  Future<bool> guardarIpImpresora(String ip) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$_baseUrl/configuracion/impresora'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'ip': ip}),
+      ).timeout(const Duration(seconds: 5));
+
+      final data = json.decode(response.body);
+      return data['success'] == true;
+    } catch (e) {
+      print('[ApiConsultas] Error guardarIpImpresora: $e');
+      return false;
     }
   }
 }

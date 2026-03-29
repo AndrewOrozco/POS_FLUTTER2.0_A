@@ -90,14 +90,16 @@ class _GestionarVentaPageState extends State<GestionarVentaPage> {
 
   Color get _productoColor {
     final producto = widget.surtidor.producto.toUpperCase();
+    // Extra / Premium → Azul (check BEFORE oxigenada!)
+    if (producto.contains('EXTRA') || producto.contains('PREMIUM') || producto.contains('SUPER')) {
+      return const Color(0xFF1E88E5);
+    }
+    // Corriente / Regular → Rojo
     if (producto.contains('CORRIENTE') || producto.contains('REGULAR') || producto.contains('OXIGENADA')) {
       return const Color(0xFFE53935);
     }
     if (producto.contains('DIESEL') || producto.contains('ACPM') || producto.contains('BIODIESEL')) {
       return const Color(0xFFFFA000);
-    }
-    if (producto.contains('EXTRA') || producto.contains('PREMIUM') || producto.contains('SUPER')) {
-      return const Color(0xFF1E88E5);
     }
     if (producto.contains('GAS') || producto.contains('GNV') || producto.contains('NATURAL')) {
       return const Color(0xFF43A047);

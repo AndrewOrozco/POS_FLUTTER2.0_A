@@ -4,6 +4,7 @@ import 'dart:async';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers/session_provider.dart';
+import '../../../turnos/presentation/pages/turnos_page.dart';
 
 class HeaderWidget extends StatefulWidget {
   const HeaderWidget({super.key});
@@ -19,7 +20,6 @@ class _HeaderWidgetState extends State<HeaderWidget> {
   @override
   void initState() {
     super.initState();
-    // Actualizar la hora cada segundo
     _timer = Timer.periodic(AppConstants.timerInterval, (timer) {
       setState(() {
         _currentTime = DateTime.now();
@@ -34,144 +34,242 @@ class _HeaderWidgetState extends State<HeaderWidget> {
   }
 
   String _formatTime(DateTime time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}:${time.second.toString().padLeft(2, '0')}';
-  }
-
-  String _formatDate(DateTime time) {
-    return '${time.day.toString().padLeft(2, '0')}-${time.month.toString().padLeft(2, '0')}-${time.year}';
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<SessionProvider>(
       builder: (context, session, child) {
+        // Determinar turno activo
+        final tienePromotor = session.promotoresActivos.isNotEmpty;
+        final turnoTexto = tienePromotor ? 'Turno: Activo' : 'Sin Turno';
+
         return Container(
           width: double.infinity,
-          height: AppConstants.headerHeight,
-          decoration: const BoxDecoration(color: AppTheme.terpeRed),
+          height: 56,
+          decoration: const BoxDecoration(
+            color: AppTheme.terpeRed,
+          ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                // Logo y texto izquierda
-                Flexible(
-                  flex: 2,
+                // ── Logo Terpel ──
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/images/Logo.png',
+                      width: 32,
+                      height: 32,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // ── "terpel" text ──
+                const Text(
+                  'terpel',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(width: 20),
+
+                // ── Separador ──
+                Container(
+                  width: 1,
+                  height: 28,
+                  color: Colors.white24,
+                ),
+                const SizedBox(width: 20),
+
+                // ── POS Name ──
+                Text(
+                  session.nombreEDS,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(width: 16),
+
+                // ── Separador ──
+                Container(
+                  width: 1,
+                  height: 28,
+                  color: Colors.white24,
+                ),
+                const SizedBox(width: 16),
+
+                // ── Turno info ──
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: tienePromotor
+                        ? Colors.white
+                        : AppTheme.terpelYellow,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Logo personalizado
+                      // Punto indicador
                       Container(
-                        width: 45,
-                        height: 45,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: tienePromotor ? Colors.green : AppTheme.terpeRed,
                           shape: BoxShape.circle,
                         ),
-                        child: ClipOval(
-                          child: Image.asset(
-                            'assets/images/Logo.png',
-                            width: 40,
-                            height: 40,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
                       ),
-                      const SizedBox(width: 15),
-                      // Texto terpel
-                      const Text(
-                        'terpel',
+                      const SizedBox(width: 6),
+                      Text(
+                        turnoTexto,
                         style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      const SizedBox(width: 40),
-                      // EDS y saludo al promotor (desde SessionProvider)
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // Nombre de la EDS (desde LazoExpress)
-                            Text(
-                              session.nombreEDS,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: MediaQuery.of(context).size.width < 600 ? 12 : 16,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 1.0,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            // Saludo al promotor activo
-                            Text(
-                              session.saludoPromotor,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: MediaQuery.of(context).size.width < 600 ? 18 : 24,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                          color: tienePromotor
+                              ? const Color(0xFF333333)
+                              : AppTheme.terpelDarkRed,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
                   ),
                 ),
-                // Información derecha (versión y fecha/hora)
-                Flexible(
-                  flex: 1,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
+
+                const Spacer(),
+
+                // ── Nombre usuario ──
+                Text(
+                  session.promotoresActivos.isNotEmpty
+                      ? session.promotoresActivos.map((p) => p.primerNombre.toUpperCase()).join(' / ')
+                      : 'SIN PROMOTOR',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(width: 16),
+
+                // ── Logo Terpel pequeño ──
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/images/Logo.png',
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+
+                // ── Hora ──
+                Text(
+                  _formatTime(_currentTime),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // ── Sync icon ──
+                Icon(
+                  Icons.sync,
+                  color: Colors.white70,
+                  size: 18,
+                ),
+                const SizedBox(width: 12),
+
+                // ── Avatar con menú rápido ──
+                PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'turnos') {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const TurnosPage()));
+                    } else if (value == 'iniciar') {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const TurnosPage(autoIniciar: true)));
+                    } else if (value == 'cerrar') {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const TurnosPage(autoCerrar: true)));
+                    }
+                  },
+                  offset: const Offset(0, 50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  color: Colors.white,
+                  itemBuilder: (_) => [
+                    PopupMenuItem(
+                      value: 'turnos',
+                      child: Row(
                         children: [
-                          const Text(
-                            'Versión',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            AppConstants.version,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                          Icon(Icons.schedule_rounded, color: Colors.grey.shade700, size: 20),
+                          const SizedBox(width: 10),
+                          const Text('Gestionar Turnos', style: TextStyle(fontWeight: FontWeight.w500)),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
+                    ),
+                    const PopupMenuDivider(height: 1),
+                    PopupMenuItem(
+                      value: 'iniciar',
+                      child: Row(
                         children: [
-                          Text(
-                            _formatDate(_currentTime),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _formatTime(_currentTime),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                          Icon(Icons.play_arrow_rounded, color: Colors.green.shade600, size: 20),
+                          const SizedBox(width: 10),
+                          const Text('Iniciar Turno', style: TextStyle(fontWeight: FontWeight.w500)),
                         ],
+                      ),
+                    ),
+                    if (tienePromotor)
+                      PopupMenuItem(
+                        value: 'cerrar',
+                        child: Row(
+                          children: [
+                            Icon(Icons.stop_rounded, color: AppTheme.terpeRed, size: 20),
+                            const SizedBox(width: 10),
+                            const Text('Cerrar Turno', style: TextStyle(fontWeight: FontWeight.w500)),
+                          ],
+                        ),
+                      ),
+                  ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [AppTheme.terpeRed, AppTheme.terpelDarkRed],
+                          ),
+                        ),
+                        child: const Center(
+                          child: Icon(Icons.person, color: Colors.white, size: 20),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.keyboard_arrow_down,
+                        color: Colors.white54,
+                        size: 20,
                       ),
                     ],
                   ),

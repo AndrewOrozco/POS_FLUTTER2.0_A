@@ -388,6 +388,13 @@ class SurtidorCardWidget extends StatelessWidget {
   Color _getProductoColor() {
     final producto = surtidor.producto.toUpperCase();
     
+    // Extra / Premium → Azul (check BEFORE oxigenada!)
+    if (producto.contains('EXTRA') || 
+        producto.contains('PREMIUM') ||
+        producto.contains('SUPER')) {
+      return const Color(0xFF1E88E5); // Azul
+    }
+    
     // Corriente / Regular → Rojo
     if (producto.contains('CORRIENTE') || 
         producto.contains('REGULAR') ||
@@ -403,13 +410,6 @@ class SurtidorCardWidget extends StatelessWidget {
         producto.contains('B10') ||
         producto.contains('B12')) {
       return const Color(0xFFFFA000); // Amarillo/Naranja
-    }
-    
-    // Extra / Premium → Azul
-    if (producto.contains('EXTRA') || 
-        producto.contains('PREMIUM') ||
-        producto.contains('SUPER')) {
-      return const Color(0xFF1E88E5); // Azul
     }
     
     // Gas Natural / GNV → Verde

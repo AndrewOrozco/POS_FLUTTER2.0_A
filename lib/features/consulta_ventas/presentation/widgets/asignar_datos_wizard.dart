@@ -170,20 +170,21 @@ class _AsignarDatosWizardState extends State<AsignarDatosWizard> {
 
   Future<void> _verificarAppTerpelRechazado() async {
     try {
-      final estadoAppTerpel = await _apiService.getAppTerpelEstado(widget.venta.id);
-      // Si puedeGestionar=true → el pago NO está en proceso → fue rechazado o no existe
-      // Verificamos si tiene medios con APP TERPEL asignados (via getMediosPagoVenta)
-      if (estadoAppTerpel.puedeGestionar && !estadoAppTerpel.pagoEnProceso) {
-        final mediosExistentes = await _apiService.getMediosPagoVenta(widget.venta.id);
-        final tieneAppTerpel = mediosExistentes.any((m) {
-          final nombre = m.nombre.toUpperCase();
-          return nombre.contains('APP TERPEL') || nombre.contains('APPTERPEL');
-        });
-        if (tieneAppTerpel) {
-          _appTerpelRechazado = true;
-          debugPrint('[AsignarDatos] APP TERPEL fue rechazado para venta ${widget.venta.id}');
-        }
-      }
+      // Verificar si la venta tiene medio APP TERPEL pre-asignado
+      final mediosExistentes = await _apiService.getMediosPagoVenta(widget.venta.id);
+      final tieneAppTerpel = mediosExistentes.any((m) {
+        final nombre = m.nombre.toUpperCase();
+        return nombre.contains('APP TERPEL') || nombre.contains('APPTERPEL');
+      });
+
+      if (!tieneAppTerpel) return;
+
+      // Si tiene APP TERPEL y está en "sin resolver" → fue rechazado.
+      // Una venta aprobada se gestiona automáticamente y sale de esta lista.
+      // El sincronizado=4 (pendiente) NO cambia en la BD después de rechazo,
+      // por lo que NO podemos confiar en fnc_validar_botones_ventas_appterpel.
+      _appTerpelRechazado = true;
+      debugPrint('[AsignarDatos] APP TERPEL en venta sin resolver ${widget.venta.id} → rechazado, permitir cambio de medio');
     } catch (e) {
       debugPrint('[AsignarDatos] Error verificando estado AppTerpel: $e');
     }

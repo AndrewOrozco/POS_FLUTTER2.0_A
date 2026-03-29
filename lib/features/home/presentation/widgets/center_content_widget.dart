@@ -16,9 +16,8 @@ class CenterContentWidget extends StatelessWidget {
         children: [
           // Logo social
           Image.asset(
-            'assets/images/terpel_logo_og.png',
-            width: MediaQuery.of(context).size.width < 600 ? 250 : 500,
-            height: MediaQuery.of(context).size.width < 600 ? 120 : 150,
+            'assets/icons/terpel/Terpel_logosimbolo_rojo.png',
+            width: MediaQuery.of(context).size.width < 600 ? 280 : 420,
             fit: BoxFit.contain,
           ),
         ],

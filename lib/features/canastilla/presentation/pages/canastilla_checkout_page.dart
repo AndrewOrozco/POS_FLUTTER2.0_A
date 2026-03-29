@@ -51,13 +51,16 @@ class _CanastillaCheckoutPageState extends State<CanastillaCheckoutPage> {
     super.dispose();
   }
 
+  // Subtotal = base sin impuestos (como Java: precio - IVA incluido)
   double get _subtotal =>
-      widget.carrito.fold(0.0, (s, i) => s + i.subtotal);
+      widget.carrito.fold(0.0, (s, i) => s + (i.subtotal - i.impuestoTotal));
 
   double get _impuestos =>
       widget.carrito.fold(0.0, (s, i) => s + i.impuestoTotal);
 
-  double get _total => _subtotal;
+  // Total = precio completo (subtotal incluye el impuesto)
+  double get _total =>
+      widget.carrito.fold(0.0, (s, i) => s + i.subtotal);
 
   double get _recibido {
     final text = _recibidoCtrl.text.replaceAll(RegExp(r'[^\d.]'), '');
@@ -73,9 +76,12 @@ class _CanastillaCheckoutPageState extends State<CanastillaCheckoutPage> {
       setState(() {
         _mediosPago = medios;
         _cargando = false;
-        // Seleccionar EFECTIVO por defecto si existe
-        final efectivoIdx = medios.indexWhere(
-            (m) => m.descripcion.toUpperCase().contains('EFECTIVO'));
+        // Buscar EFECTIVO por descripción o tipo
+        final efectivoIdx = medios.indexWhere((m) {
+          final d = m.descripcion.toUpperCase();
+          final t = m.tipo.toUpperCase();
+          return d.contains('EFECTIVO') || d.contains('EFECT') || t.contains('EFECTIVO');
+        });
         _medioPagoSeleccionado = efectivoIdx >= 0 ? medios[efectivoIdx] : (medios.isNotEmpty ? medios.first : null);
       });
     }
@@ -394,183 +400,149 @@ class _CanastillaCheckoutPageState extends State<CanastillaCheckoutPage> {
       ),
       child: Column(
         children: [
-          // Header
+          // Header compacto
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             width: double.infinity,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFF8F00), Color(0xFFE65100)],
-              ),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
+              gradient: const LinearGradient(colors: [Color(0xFFFF8F00), Color(0xFFE65100)]),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             ),
-            child: const Column(
+            child: const Row(
               children: [
-                Icon(Icons.payment, size: 40, color: Colors.white),
-                SizedBox(height: 8),
+                Icon(Icons.payment, size: 22, color: Colors.white),
+                SizedBox(width: 10),
                 Text('MEDIO DE PAGO',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold)),
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
               ],
             ),
           ),
-          // Totales
+          // Totales compactos
           Container(
-            padding: const EdgeInsets.all(16),
-            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            margin: const EdgeInsets.fromLTRB(10, 8, 10, 4),
             decoration: BoxDecoration(
               color: const Color(0xFFFFF8E1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Column(
               children: [
                 _totalRow('Subtotal', _subtotal),
                 _totalRow('Impuestos', _impuestos),
-                const Divider(),
+                const Divider(height: 10),
                 _totalRow('TOTAL', _total, bold: true, big: true),
               ],
             ),
           ),
-          // Selector de medio de pago
+          // Selector de medio de pago — scrollable
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Seleccione medio de pago:',
-                    style:
-                        TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 140,
-                  child: ListView.builder(
-                    itemCount: _mediosPago.length,
-                    itemBuilder: (ctx, idx) {
-                      final mp = _mediosPago[idx];
-                      final sel =
-                          _medioPagoSeleccionado?.id == mp.id;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Material(
-                          color: sel
-                              ? const Color(0xFFFF8F00).withOpacity(0.12)
-                              : Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(10),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(10),
-                            onTap: () =>
-                                setState(() => _medioPagoSeleccionado = mp),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 10),
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: sel
-                                      ? const Color(0xFFFF8F00)
-                                      : Colors.grey.shade300,
-                                  width: sel ? 2 : 1,
-                                ),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    _iconForMedio(mp.descripcion),
-                                    color: sel
-                                        ? const Color(0xFFFF8F00)
-                                        : Colors.grey.shade600,
-                                    size: 22,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      mp.descripcion,
-                                      style: TextStyle(
-                                        fontWeight: sel
-                                            ? FontWeight.bold
-                                            : FontWeight.w500,
-                                        color: sel
-                                            ? const Color(0xFFE65100)
-                                            : Colors.black87,
-                                      ),
-                                    ),
-                                  ),
-                                  if (sel)
-                                    const Icon(Icons.check_circle,
-                                        color: Color(0xFFFF8F00), size: 22),
-                                ],
-                              ),
-                            ),
+            padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
+            child: const Text('Seleccione medio de pago:',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          ),
+          const SizedBox(height: 4),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              itemCount: _mediosPago.length,
+              itemBuilder: (ctx, idx) {
+                final mp = _mediosPago[idx];
+                final sel = _medioPagoSeleccionado?.id == mp.id;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Material(
+                    color: sel ? const Color(0xFFFF8F00).withOpacity(0.12) : Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () => setState(() => _medioPagoSeleccionado = mp),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: sel ? const Color(0xFFFF8F00) : Colors.grey.shade300,
+                            width: sel ? 2 : 1,
                           ),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                      );
-                    },
+                        child: Row(
+                          children: [
+                            Icon(_iconForMedio(mp.descripcion),
+                                color: sel ? const Color(0xFFFF8F00) : Colors.grey.shade600, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(mp.descripcion,
+                                style: TextStyle(
+                                  fontWeight: sel ? FontWeight.bold : FontWeight.w500,
+                                  fontSize: 13,
+                                  color: sel ? const Color(0xFFE65100) : Colors.black87,
+                                ))),
+                            if (sel)
+                              const Icon(Icons.check_circle, color: Color(0xFFFF8F00), size: 20),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                );
+              },
             ),
           ),
-          // Valor recibido (solo para efectivo)
+          // Valor recibido + teclado numérico (solo para efectivo)
           if (esEfectivo) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-              child: TextField(
-                controller: _recibidoCtrl,
-                keyboardType: TextInputType.number,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  labelText: 'Valor Recibido',
-                  prefixText: '\$ ',
-                  prefixStyle: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 18),
-                  filled: true,
-                  fillColor: const Color(0xFFF5F5F5),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                style:
-                    const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-            ),
-            // Cambio
+            // Display del valor recibido
             Container(
-              margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.fromLTRB(10, 8, 10, 4),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: _cambio > 0
-                    ? Colors.green.shade50
-                    : Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color:
-                      _cambio > 0 ? Colors.green.shade300 : Colors.grey.shade300,
-                ),
+                color: const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFF8F00).withOpacity(0.3)),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('CAMBIO:',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  Text(
-                    '\$${_cambio.toStringAsFixed(0)}',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: _cambio > 0
-                          ? Colors.green.shade700
-                          : Colors.grey.shade500,
+                  const Text('\$ ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Color(0xFFE65100))),
+                  Expanded(
+                    child: Text(
+                      _recibidoCtrl.text.isEmpty ? '0' : _recibidoCtrl.text,
+                      style: TextStyle(
+                        fontSize: 26, fontWeight: FontWeight.bold,
+                        color: _recibido >= _total && _recibidoCtrl.text.isNotEmpty
+                            ? Colors.green.shade700 : Colors.black87,
+                      ),
+                      textAlign: TextAlign.right,
                     ),
                   ),
                 ],
               ),
             ),
+            // Cambio
+            Container(
+              margin: const EdgeInsets.fromLTRB(10, 0, 10, 4),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: _cambio > 0 ? Colors.green.shade50 : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _cambio > 0 ? Colors.green.shade300 : Colors.grey.shade300),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('CAMBIO:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  Text('\$${_cambio.toStringAsFixed(0)}',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold,
+                      color: _cambio > 0 ? Colors.green.shade700 : Colors.grey.shade500)),
+                ],
+              ),
+            ),
+            // Teclado numérico
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 2, 10, 0),
+                child: _buildNumericKeypad(),
+              ),
+            ),
           ],
-          const Spacer(),
+          if (!esEfectivo) const Spacer(),
           // ── Botones de venta (Java: StoreConfirmarViewController) ──
           // Botón 1: F. ELECTRONICA / FACTURA POS
           // Botón 2: GUARDAR VENTA
@@ -581,7 +553,7 @@ class _CanastillaCheckoutPageState extends State<CanastillaCheckoutPage> {
               height: 52,
               child: ElevatedButton.icon(
                 onPressed:
-                    _procesando || _medioPagoSeleccionado == null
+                    _procesando || _medioPagoSeleccionado == null || (esEfectivo && _recibido < _total)
                         ? null
                         : _mostrarDialogoFE,
                 style: ElevatedButton.styleFrom(
@@ -625,7 +597,7 @@ class _CanastillaCheckoutPageState extends State<CanastillaCheckoutPage> {
               height: 52,
               child: ElevatedButton.icon(
                 onPressed:
-                    _procesando || _medioPagoSeleccionado == null
+                    _procesando || _medioPagoSeleccionado == null || (esEfectivo && _recibido < _total)
                         ? null
                         : () => _confirmarVenta(esFacturacionElectronica: false),
                 style: ElevatedButton.styleFrom(
@@ -653,6 +625,75 @@ class _CanastillaCheckoutPageState extends State<CanastillaCheckoutPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildNumericKeypad() {
+    void onDigit(String d) {
+      setState(() {
+        _recibidoCtrl.text += d;
+      });
+    }
+    void onClear() {
+      setState(() {
+        _recibidoCtrl.text = '';
+      });
+    }
+    void onBackspace() {
+      setState(() {
+        final t = _recibidoCtrl.text;
+        if (t.isNotEmpty) _recibidoCtrl.text = t.substring(0, t.length - 1);
+      });
+    }
+
+    Widget key(String label, {VoidCallback? onTap, Color? color, Color? textColor}) {
+      return Expanded(
+        child: Padding(
+          padding: const EdgeInsets.all(2),
+          child: Material(
+            color: color ?? Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            elevation: 1,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: onTap,
+              child: Container(
+                alignment: Alignment.center,
+                child: label == '⌫'
+                    ? Icon(Icons.backspace_outlined, color: textColor ?? Colors.black87, size: 22)
+                    : Text(label, style: TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold,
+                        color: textColor ?? Colors.black87)),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        Expanded(child: Row(children: [
+          key('1', onTap: () => onDigit('1')),
+          key('2', onTap: () => onDigit('2')),
+          key('3', onTap: () => onDigit('3')),
+        ])),
+        Expanded(child: Row(children: [
+          key('4', onTap: () => onDigit('4')),
+          key('5', onTap: () => onDigit('5')),
+          key('6', onTap: () => onDigit('6')),
+        ])),
+        Expanded(child: Row(children: [
+          key('7', onTap: () => onDigit('7')),
+          key('8', onTap: () => onDigit('8')),
+          key('9', onTap: () => onDigit('9')),
+        ])),
+        Expanded(child: Row(children: [
+          key('C', onTap: onClear, color: Colors.red.shade50, textColor: Colors.red),
+          key('0', onTap: () => onDigit('0')),
+          key('⌫', onTap: onBackspace, color: Colors.orange.shade50, textColor: Colors.orange.shade800),
+        ])),
+      ],
     );
   }
 

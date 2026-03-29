@@ -131,13 +131,17 @@ class _RumboPageState extends State<RumboPage> {
 
     _pollingActivo = true;
     _esperandoLector = true;
-    final cara = _mangueraSeleccionada!.cara;
 
     () async {
       while (_pollingActivo && mounted) {
+        // Read cara from current manguera on EACH iteration
+        // so that if the user switches manguera mid-poll, we poll the new cara
+        final caraActual = _mangueraSeleccionada?.cara;
+        if (caraActual == null) break;
+
         try {
           final lectura = await _apiService.getLecturaIdentificadorRumbo(
-            cara: cara,
+            cara: caraActual,
             segundosEspera: 8,
           );
 
@@ -1077,38 +1081,47 @@ class _RumboPageState extends State<RumboPage> {
   // ============================================================
 
   Widget _buildPantallaFormulario() {
-    return Row(
+    return Column(
       children: [
-        // Panel izquierdo: Formulario
+        // Contenido principal
         Expanded(
-          flex: 3,
           child: _buildFormulario(),
         ),
-        // Panel derecho: Teclado (más amplio para mejor usabilidad)
-        SizedBox(
-          width: 350,
-          child: _buildPanelTeclado(),
-        ),
+        // Teclado compacto abajo
+        if (_campoActivo != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Center(
+              child: TecladoTactil(
+                controller: _campoActivo == 'km'
+                    ? _kmController
+                    : _campoActivo == 'serial'
+                        ? _serialController
+                        : _passController,
+                soloNumeros: true,
+                height: 210,
+                colorTema: const Color(0xFFBA0C2F),
+              ),
+            ),
+          ),
       ],
     );
   }
 
   Widget _buildFormulario() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Paso 1: Mangueras ──
           _buildSeccionMangueras(),
           const SizedBox(height: 16),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: _buildSeccionKilometraje()),
-              const SizedBox(width: 16),
-              Expanded(flex: 2, child: _buildSeccionMedios()),
-            ],
-          ),
+          // ── Paso 2: Kilometraje ──
+          _buildSeccionKilometraje(),
+          const SizedBox(height: 16),
+          // ── Paso 3: Medios ──
+          _buildSeccionMedios(),
           const SizedBox(height: 16),
           _buildSeccionIdentificador(),
           const SizedBox(height: 20),
@@ -1141,96 +1154,117 @@ class _RumboPageState extends State<RumboPage> {
   // SECCIONES DEL FORMULARIO
   // ============================================================
 
+  Widget _buildStepHeader(int step, String title) {
+    return Row(
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: const BoxDecoration(
+            color: Color(0xFFBA0C2F),
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              '$step',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSeccionMangueras() {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(color: Colors.grey.shade200, blurRadius: 4, offset: const Offset(0, 2)),
-        ],
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.local_gas_station, color: AppTheme.terpeRed, size: 22),
-              const SizedBox(width: 8),
-              const Text(
-                'MANGUERA',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Color(0xFF333333),
-                ),
+          _buildStepHeader(1, 'Seleccione Manguera'),
+          if (_mangueraSeleccionada != null) ...[
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.only(left: 38),
+              child: Text(
+                '${_mangueraSeleccionada!.productoDescripcion} - \$${_mangueraSeleccionada!.productoPrecio.toStringAsFixed(0)}/gal',
+                style: TextStyle(color: AppTheme.terpeRed, fontWeight: FontWeight.w600, fontSize: 13),
               ),
-              if (_mangueraSeleccionada != null) ...[
-                const SizedBox(width: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppTheme.terpeRed.withAlpha(20),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${_mangueraSeleccionada!.productoDescripcion} - \$${_mangueraSeleccionada!.productoPrecio.toStringAsFixed(0)}/gal',
-                    style: TextStyle(
-                      color: AppTheme.terpeRed,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
+            ),
+          ],
+          const SizedBox(height: 14),
+          Row(
             children: _mangueras.map((m) {
               final seleccionada = _mangueraSeleccionada?.manguera == m.manguera &&
                   _mangueraSeleccionada?.cara == m.cara;
               final esUrea = m.esUrea;
-              return GestureDetector(
-                onTap: m.bloqueado
-                    ? null
-                    : () => setState(() => _mangueraSeleccionada = m),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 75,
-                  height: 75,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: m.bloqueado
-                        ? Colors.grey.shade300
-                        : seleccionada
+              return Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: GestureDetector(
+                  onTap: m.bloqueado
+                      ? null
+                      : () {
+                          final cambio = _mangueraSeleccionada?.cara != m.cara;
+                          setState(() => _mangueraSeleccionada = m);
+                          if (cambio && _medioSeleccionado != null && _medioSeleccionado!.requiereLector) {
+                            _detenerPollingLector();
+                            _serialController.clear();
+                            _iniciarPollingLector();
+                          }
+                        },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: m.bloqueado
+                          ? Colors.grey.shade200
+                          : seleccionada
+                              ? (esUrea ? const Color(0xFF2E7D32) : AppTheme.terpeRed)
+                              : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: seleccionada
                             ? (esUrea ? const Color(0xFF2E7D32) : AppTheme.terpeRed)
-                            : (esUrea ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE)),
-                    border: Border.all(
-                      color: seleccionada
-                          ? (esUrea ? const Color(0xFF2E7D32) : AppTheme.terpeRed)
-                          : Colors.grey.shade300,
-                      width: seleccionada ? 3 : 1,
-                    ),
-                    boxShadow: seleccionada
-                        ? [BoxShadow(color: (esUrea ? Colors.green : AppTheme.terpeRed).withAlpha(80), blurRadius: 8)]
-                        : null,
-                  ),
-                  child: Center(
-                    child: Text(
-                      esUrea ? 'UREA' : '${m.manguera}',
-                      style: TextStyle(
-                        color: m.bloqueado
-                            ? Colors.grey
-                            : seleccionada
-                                ? Colors.white
-                                : (esUrea ? const Color(0xFF2E7D32) : AppTheme.terpeRed),
-                        fontWeight: FontWeight.bold,
-                        fontSize: esUrea ? 13 : 20,
+                            : Colors.grey.shade300,
+                        width: seleccionada ? 2 : 1,
                       ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          esUrea ? Icons.local_gas_station : Icons.local_gas_station,
+                          size: 20,
+                          color: m.bloqueado
+                              ? Colors.grey
+                              : seleccionada
+                                  ? Colors.white
+                                  : (esUrea ? const Color(0xFF2E7D32) : AppTheme.terpeRed),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          esUrea ? 'UREA' : 'Manguera ${m.manguera}',
+                          style: TextStyle(
+                            color: m.bloqueado
+                                ? Colors.grey
+                                : seleccionada
+                                    ? Colors.white
+                                    : (esUrea ? const Color(0xFF2E7D32) : const Color(0xFF333333)),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -1247,52 +1281,43 @@ class _RumboPageState extends State<RumboPage> {
     return GestureDetector(
       onTap: () => setState(() => _campoActivo = 'km'),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: activo ? Border.all(color: AppTheme.terpeRed, width: 2) : null,
-          boxShadow: [
-            BoxShadow(color: Colors.grey.shade200, blurRadius: 4, offset: const Offset(0, 2)),
-          ],
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: activo ? AppTheme.terpeRed : Colors.grey.shade200, width: activo ? 2 : 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(Icons.speed, color: AppTheme.terpeRed, size: 22),
-                const SizedBox(width: 8),
-                const Text(
-                  'KILOMETRAJE',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Color(0xFF333333),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
+            _buildStepHeader(2, 'Ingrese Kilometraje'),
+            const SizedBox(height: 12),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               decoration: BoxDecoration(
                 color: activo ? Colors.red.shade50 : Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: activo ? AppTheme.terpeRed : Colors.grey.shade300,
                   width: activo ? 2 : 1,
                 ),
               ),
-              child: Text(
-                _kmController.text.isEmpty ? 'Ingrese km' : _kmController.text,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: _kmController.text.isEmpty ? Colors.grey : Colors.black87,
-                  letterSpacing: 2,
-                ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _kmController.text.isEmpty ? '000000' : _kmController.text,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: _kmController.text.isEmpty ? Colors.grey.shade400 : Colors.black87,
+                        letterSpacing: 3,
+                      ),
+                    ),
+                  ),
+                  Text('km', style: TextStyle(fontSize: 16, color: Colors.grey.shade500)),
+                ],
               ),
             ),
           ],
@@ -1303,32 +1328,17 @@ class _RumboPageState extends State<RumboPage> {
 
   Widget _buildSeccionMedios() {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(color: Colors.grey.shade200, blurRadius: 4, offset: const Offset(0, 2)),
-        ],
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.fingerprint, color: AppTheme.terpeRed, size: 22),
-              const SizedBox(width: 8),
-              const Text(
-                'MEDIO DE AUTORIZACIÓN',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Color(0xFF333333),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
+          _buildStepHeader(3, 'Seleccione Medio'),
+          const SizedBox(height: 14),
           Row(
             children: _medios.map((medio) {
               final seleccionado = _medioSeleccionado?.id == medio.id;
@@ -1352,33 +1362,51 @@ class _RumboPageState extends State<RumboPage> {
                     },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
                       decoration: BoxDecoration(
-                        color: seleccionado ? AppTheme.terpeRed.withAlpha(20) : Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(10),
+                        color: seleccionado ? Colors.green.shade50 : Colors.white,
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: seleccionado ? AppTheme.terpeRed : Colors.grey.shade300,
+                          color: seleccionado ? Colors.green.shade400 : Colors.grey.shade300,
                           width: seleccionado ? 2 : 1,
                         ),
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                      child: Stack(
                         children: [
-                          Icon(
-                            _iconoMedio(medio.icono),
-                            size: 28,
-                            color: seleccionado ? AppTheme.terpeRed : Colors.grey.shade600,
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _iconoMedio(medio.icono),
+                                size: 28,
+                                color: seleccionado ? Colors.green.shade700 : Colors.grey.shade600,
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                medio.descripcion,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: seleccionado ? FontWeight.bold : FontWeight.w500,
+                                  color: seleccionado ? Colors.green.shade800 : Colors.grey.shade700,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            medio.descripcion,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: seleccionado ? FontWeight.bold : FontWeight.w500,
-                              color: seleccionado ? AppTheme.terpeRed : Colors.grey.shade700,
+                          if (seleccionado)
+                            Positioned(
+                              top: -2,
+                              right: -2,
+                              child: Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade600,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.check, color: Colors.white, size: 14),
+                              ),
                             ),
-                          ),
                         ],
                       ),
                     ),
@@ -1641,16 +1669,16 @@ class _RumboPageState extends State<RumboPage> {
       height: 56,
       child: ElevatedButton.icon(
         onPressed: _formularioCompleto ? _autorizar : null,
-        icon: const Icon(Icons.verified_user, size: 28),
+        icon: const Icon(Icons.verified_user, size: 24),
         label: const Text(
           'AUTORIZAR VENTA',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: _formularioCompleto ? AppTheme.terpeRed : Colors.grey.shade400,
+          backgroundColor: _formularioCompleto ? Colors.green.shade600 : Colors.grey.shade400,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          elevation: _formularioCompleto ? 4 : 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          elevation: 0,
         ),
       ),
     );
@@ -1691,36 +1719,40 @@ class _RumboPageState extends State<RumboPage> {
             ),
           ),
           Expanded(
-            child: _controllerActivo != null
-                ? TecladoTactil(
-                    controller: _controllerActivo!,
-                    soloNumeros: _tecladoNumerico,
-                    onAceptar: () {
-                      if (_campoActivo == 'km') {
-                        if (_medioSeleccionado != null && !_medioSeleccionado!.requiereLector) {
-                          setState(() => _campoActivo = 'serial');
-                        }
-                      } else if (_campoActivo == 'serial' && _medioSeleccionado?.id == 1) {
-                        setState(() => _campoActivo = 'pass');
-                      } else {
-                        if (_formularioCompleto) _autorizar();
-                      }
-                    },
-                  )
-                : Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.keyboard, size: 48, color: Colors.grey.shade400),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Toque un campo\npara activar el teclado',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
-                        ),
-                      ],
-                    ),
-                  ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 260),
+                child: _controllerActivo != null
+                    ? TecladoTactil(
+                        controller: _controllerActivo!,
+                        soloNumeros: _tecladoNumerico,
+                        height: 250,
+                        onAceptar: () {
+                          if (_campoActivo == 'km') {
+                            if (_medioSeleccionado != null && !_medioSeleccionado!.requiereLector) {
+                              setState(() => _campoActivo = 'serial');
+                            }
+                          } else if (_campoActivo == 'serial' && _medioSeleccionado?.id == 1) {
+                            setState(() => _campoActivo = 'pass');
+                          } else {
+                            if (_formularioCompleto) _autorizar();
+                          }
+                        },
+                      )
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.keyboard, size: 40, color: Colors.grey.shade400),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Toque un campo\npara activar el teclado',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
           ),
         ],
       ),

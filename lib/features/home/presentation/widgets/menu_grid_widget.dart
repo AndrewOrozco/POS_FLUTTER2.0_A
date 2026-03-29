@@ -9,51 +9,113 @@ import '../../../turnos/presentation/pages/turnos_page.dart';
 import '../../../gopass/presentation/pages/gopass_estado_pago_page.dart';
 import '../../../gopass/presentation/pages/gopass_enviar_pago_page.dart';
 import '../../../canastilla/presentation/pages/canastilla_page.dart';
+import '../../../market/presentation/pages/market_page.dart';
+import '../../../fidelizacion/presentation/pages/fidelizacion_page.dart';
+import '../../../configuracion/presentation/pages/configuracion_page.dart';
+import '../../../reportes/presentation/pages/reportes_sincronizacion_page.dart';
 
 class MenuGridWidget extends StatelessWidget {
   const MenuGridWidget({super.key});
 
   /// Módulos que requieren turno activo para poder acceder
-  static const _modulosRequierenTurno = {'Rumbo', 'Canastilla'};
+  static const _modulosRequierenTurno = {'Rumbo', 'Canastilla', 'Market'};
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: AppConstants.rightPanelWidth,
-      padding: const EdgeInsets.all(AppConstants.defaultPadding),
-      color: AppTheme.darkGray,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF2F3F5),
+        border: Border(
+          left: BorderSide(color: Colors.grey.shade300, width: 1),
+        ),
+      ),
       child: Column(
         children: [
-          // Botones del menú
           Expanded(
-            child: GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.0,
+            child: ListView(
+              padding: EdgeInsets.zero,
               children: [
-                _buildMenuButton(
+                // ══════ OPERACIÓN ══════
+                _buildSectionHeader('Operación'),
+                _buildMenuItem(
                   context: context,
-                  icon: Icons.schedule_outlined,
+                  icon: Icons.schedule,
                   title: 'Turnos',
-                  color: const Color(0xFFE3F2FD),
-                  iconColor: const Color(0xFF1976D2),
+                  iconBgColor: AppTheme.terpeRed,
                   onTap: () => _navegarTurnos(context),
                 ),
-                _buildMenuButton(
+                _buildMenuItem(
                   context: context,
-                  icon: Icons.point_of_sale_outlined,
+                  icon: Icons.shopping_bag,
                   title: 'Ventas',
-                  color: const Color(0xFFFCE4EC),
-                  iconColor: const Color(0xFFE91E63),
+                  iconBgColor: const Color(0xFFE91E63),
                   onTap: () => _navegarConsultaVentas(context),
                 ),
-                _buildMenuButton(
+                _buildMenuItem(
                   context: context,
-                  icon: Icons.shopping_cart_outlined,
+                  icon: Icons.local_gas_station,
+                  title: 'Surtidor',
+                  iconBgColor: AppTheme.terpeRed,
+                ),
+                _buildMenuItem(
+                  context: context,
+                  icon: Icons.location_on,
+                  title: 'Rumbo',
+                  iconBgColor: AppTheme.terpeRed,
+                  onTap: () => _verificarTurnoYNavegar(context, 'Rumbo', () {
+                    _navegarRumbo(context);
+                  }),
+                ),
+                const SizedBox(height: 12),
+
+                // ══════ ADMINISTRACIÓN ══════
+                _buildSectionHeader('Administración'),
+                _buildMenuItem(
+                  context: context,
+                  icon: Icons.assessment,
+                  title: 'Reportes',
+                  iconBgColor: const Color(0xFF424242),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ReportesSincronizacionPage()),
+                  ),
+                ),
+                _buildMenuItem(
+                  context: context,
+                  icon: Icons.people,
+                  title: 'Usuarios',
+                  iconBgColor: const Color(0xFF0277BD),
+                ),
+                const SizedBox(height: 12),
+
+                // ══════ CLIENTE ══════
+                _buildSectionHeader('Cliente'),
+                _buildMenuItem(
+                  context: context,
+                  icon: Icons.favorite,
+                  title: 'Fidelización',
+                  iconBgColor: const Color(0xFF388E3C),
+                  onTap: () => _navegarFidelizacion(context),
+                ),
+                _buildMenuItem(
+                  context: context,
+                  title: 'Market',
+                  iconBgColor: const Color(0xFFE84868),
+                  assetIcon: 'assets/icons/terpel/Recurso 1672@2x.png',
+                  onTap: () => _verificarTurnoYNavegar(context, 'Market', () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MarketPage()),
+                    );
+                  }),
+                ),
+                _buildMenuItem(
+                  context: context,
                   title: 'Canastilla',
-                  color: const Color(0xFFFFF8E1),
-                  iconColor: const Color(0xFFFF8F00),
+                  iconBgColor: const Color(0xFFFF8F00),
+                  assetIcon: 'assets/icons/terpel/location_pin.png',
                   onTap: () => _verificarTurnoYNavegar(context, 'Canastilla', () {
                     Navigator.push(
                       context,
@@ -61,76 +123,127 @@ class MenuGridWidget extends StatelessWidget {
                     );
                   }),
                 ),
-                _buildMenuButton(
+                _buildMenuItem(
                   context: context,
-                  icon: Icons.location_on_outlined,
-                  title: 'Rumbo',
-                  color: const Color(0xFFFFEBEE),
-                  iconColor: AppTheme.terpeRed,
-                  onTap: () => _verificarTurnoYNavegar(context, 'Rumbo', () {
-                    _navegarRumbo(context);
-                  }),
-                ),
-                _buildMenuButton(
-                  context: context,
-                  icon: Icons.storefront_outlined,
-                  title: 'Market',
-                  color: const Color(0xFFE0F2F1),
-                  iconColor: const Color(0xFF00897B),
-                  onTap: () => _verificarTurnoYNavegar(context, 'Market', () {
-                    print('Navegar a Market');
-                  }),
-                ),
-                _buildMenuButton(
-                  context: context,
-                  icon: Icons.settings_outlined,
-                  title: 'Configuración',
-                  color: const Color(0xFFF3E5F5),
-                  iconColor: const Color(0xFF7B1FA2),
-                ),
-                _buildMenuButton(
-                  context: context,
-                  icon: Icons.card_giftcard_outlined,
-                  title: 'Fidelización',
-                  color: const Color(0xFFE8F5E8),
-                  iconColor: const Color(0xFF388E3C),
-                ),
-                _buildMenuButton(
-                  context: context,
-                  icon: Icons.local_gas_station_outlined,
-                  title: 'Surtidor',
-                  color: const Color(0xFFFFEBEE),
-                  iconColor: AppTheme.terpeRed,
-                ),
-                _buildMenuButton(
-                  context: context,
-                  icon: Icons.assessment_outlined,
-                  title: 'Reportes',
-                  color: const Color(0xFFF5F5F5),
-                  iconColor: const Color(0xFF424242),
-                ),
-                _buildMenuButton(
-                  context: context,
-                  icon: Icons.group_outlined,
-                  title: 'Usuarios',
-                  color: const Color(0xFFE1F5FE),
-                  iconColor: const Color(0xFF0277BD),
-                ),
-                _buildMenuButton(
-                  context: context,
-                  icon: Icons.credit_card_outlined,
+                  icon: Icons.credit_card,
                   title: 'Gopass',
-                  color: const Color(0xFFE8F5E8),
-                  iconColor: const Color(0xFF2E7D32),
+                  iconBgColor: const Color(0xFF2E7D32),
                   onTap: () => _mostrarMenuGopass(context),
                 ),
               ],
+            ),
+          ),
+          // ══════ CONFIGURACIÓN (fijada al fondo) ══════
+          const Divider(height: 1),
+          _buildMenuItem(
+            context: context,
+            icon: Icons.settings,
+            title: 'Configuración',
+            iconBgColor: const Color(0xFF7B1FA2),
+            showChevron: true,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ConfiguracionPage()),
             ),
           ),
         ],
       ),
     );
   }
+
+  // ── Section header ──
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8, top: 4, bottom: 8),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: Colors.grey.shade500,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+
+  // ── Menu item ──
+  Widget _buildMenuItem({
+    required BuildContext context,
+    IconData? icon,
+    String? assetIcon,
+    required String title,
+    required Color iconBgColor,
+    VoidCallback? onTap,
+    bool showChevron = true,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap ?? () {
+            debugPrint('Botón $title presionado');
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                // Ícono circular
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: iconBgColor,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: assetIcon != null
+                        ? Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: Image.asset(
+                              assetIcon,
+                              width: 22,
+                              height: 22,
+                              color: Colors.white,
+                              colorBlendMode: BlendMode.srcIn,
+                            ),
+                          )
+                        : Icon(icon, color: Colors.white, size: 20),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Título
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+                // Chevron
+                if (showChevron)
+                  Icon(
+                    Icons.chevron_right,
+                    size: 20,
+                    color: Colors.grey.shade400,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════
+  //  NAVEGACIÓN (sin cambios respecto al original)
+  // ══════════════════════════════════════════════════════════
 
   void _navegarTurnos(BuildContext context) {
     Navigator.push(
@@ -150,6 +263,13 @@ class MenuGridWidget extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const RumboPage()),
+    );
+  }
+
+  void _navegarFidelizacion(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const FidelizacionPage()),
     );
   }
 
@@ -331,104 +451,5 @@ class MenuGridWidget extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Widget _buildMenuButton({
-    required BuildContext context,
-    required IconData icon,
-    required String title,
-    required Color color,
-    required Color iconColor,
-    VoidCallback? onTap,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade200,
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(15),
-          onTap: onTap ?? () {
-            print('Botón $title presionado');
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Área del ícono más grande y colorida
-                Expanded(
-                  flex: 3,
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: Center(child: _buildCustomIcon(title, iconColor)),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Texto
-                Expanded(
-                  flex: 1,
-                  child: Center(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCustomIcon(String title, Color iconColor) {
-    switch (title) {
-      case 'Turnos':
-        return Icon(Icons.schedule, size: 50, color: iconColor);
-      case 'Ventas':
-        return Icon(Icons.shopping_bag, size: 50, color: iconColor);
-      case 'Canastilla':
-        return Icon(Icons.shopping_cart, size: 50, color: iconColor);
-      case 'Rumbo':
-        return Icon(Icons.location_on, size: 50, color: iconColor);
-      case 'Market':
-        return Icon(Icons.storefront, size: 50, color: iconColor);
-      case 'Configuración':
-        return Icon(Icons.settings, size: 50, color: iconColor);
-      case 'Fidelización':
-        return Icon(Icons.favorite, size: 50, color: iconColor);
-      case 'Surtidor':
-        return Icon(Icons.local_gas_station, size: 50, color: iconColor);
-      case 'Reportes':
-        return Icon(Icons.assessment, size: 50, color: iconColor);
-      case 'Usuarios':
-        return Icon(Icons.people, size: 50, color: iconColor);
-      case 'Gopass':
-        return Icon(Icons.credit_card, size: 50, color: iconColor);
-      default:
-        return Icon(Icons.help_outline, size: 50, color: iconColor);
-    }
   }
 }

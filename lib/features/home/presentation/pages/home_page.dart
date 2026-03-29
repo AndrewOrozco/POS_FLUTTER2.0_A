@@ -84,6 +84,16 @@ class _HomePageState extends State<HomePage> {
   void _onPaymentNotification(PaymentNotification notification) {
     if (!mounted) return;
 
+    // Notificación "pendiente" de APP TERPEL: mostrar diálogo de countdown para escanear QR
+    if (notification.isAppTerpel && notification.isPendiente) {
+      if (PaymentWebSocketService().countdownDialogActive) {
+        print('[HomePage] Notificación pendiente APP TERPEL ignorada (CountdownDialog activo)');
+        return;
+      }
+      _mostrarDialogoEscaneoQR(notification);
+      return;
+    }
+
     // Si el CountdownDialog está activo, él ya maneja las notificaciones APP TERPEL
     if (PaymentWebSocketService().countdownDialogActive && notification.isAppTerpel) {
       print('[HomePage] Notificación APP TERPEL ignorada (CountdownDialog activo)');
@@ -299,88 +309,45 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  /// Intenta obtener el movimiento_id de la venta y enviarla a imprimir.
-  /// Reintenta hasta 4 veces con delays crecientes para dar tiempo al backend
-  /// de crear el movimiento en ct_movimientos (similar a ControlImpresion de Java).
+  /// Cuando la venta termina, verificamos el estado pero NO imprimimos.
+  /// LazoExpress se encarga de toda la impresión:
+  ///   - statusPump=true  → LazoExpress envía a enviar-fe-pump (FE 7011 + impresión)
+  ///   - statusPump=false → LazoExpress imprime localmente
+  ///
+  /// Flutter NO debe intentar imprimir porque venta-activa-cara puede devolver
+  /// un movimiento anterior (ej: 488 en vez de 489 — el nuevo aún no tiene cara
+  /// en atributos cuando Flutter consulta).
   Future<void> _intentarImprimirVenta(int cara) async {
-    const maxReintentos = 4;
-    const delays = [5, 8, 12, 15]; // segundos entre reintentos
-    
-    for (int intento = 0; intento < maxReintentos; intento++) {
-      // Esperar antes del intento (dar tiempo al backend)
-      final delay = delays[intento];
-      print('[HomePage] Impresión auto cara $cara: esperando ${delay}s (intento ${intento + 1}/$maxReintentos)');
-      await Future.delayed(Duration(seconds: delay));
-      
-      if (!mounted) return;
-      
-      try {
-        // Obtener el movimiento_id para esta cara
-        final ventaActiva = await _apiService.getVentaActivaPorCara(cara);
-        
-        if (ventaActiva.found && ventaActiva.movimientoId != null) {
-          // Solo imprimir desde Flutter cuando statusPump=true (factura_electronica=YES)
-          // Cuando statusPump=false, LazoExpress ya se encarga de imprimir directamente
-          if (!ventaActiva.statusPump) {
-            print('[HomePage] statusPump=false → LazoExpress imprime, Flutter no hace nada');
-            return;
-          }
+    // Esperar un poco para que LazoExpress cree el movimiento
+    await Future.delayed(const Duration(seconds: 3));
+    if (!mounted) return;
 
-          print('[HomePage] statusPump=true → imprimiendo vía backend Python, movimiento_id=${ventaActiva.movimientoId}');
-          
-          // Enviar a imprimir
-          final resultado = await _apiService.imprimirVenta(
-            movimientoId: ventaActiva.movimientoId!,
-          );
-          
-          if (!mounted) return;
-          
-          if (resultado['exito'] == true) {
-            // Si el guard bloqueó la impresión (GoPass/AppTerpel pendiente de aprobación),
-            // no mostrar notificación de éxito — la impresión se hará después del callback.
-            if (resultado['pendiente_orquestador'] == true) {
-              print('[HomePage] Impresión bloqueada: pago orquestador pendiente para cara $cara');
-              return;
-            }
-            print('[HomePage] Impresión automática exitosa para cara $cara');
-            TopNotification.show(
-              context,
-              message: 'Ticket impreso - Cara $cara',
-              type: NotificationType.success,
-              duration: const Duration(seconds: 4),
-            );
-            return; // Éxito, salir del loop
-          } else {
-            print('[HomePage] Impresión auto falló: ${resultado['mensaje']}');
-            if (intento == maxReintentos - 1 && mounted) {
-              TopNotification.show(
-                context,
-                message: 'Error imprimiendo cara $cara',
-                subtitle: resultado['mensaje']?.toString() ?? 'Error desconocido',
-                type: NotificationType.error,
-                duration: const Duration(seconds: 8),
-              );
-            }
-          }
+    try {
+      final ventaActiva = await _apiService.getVentaActivaPorCara(cara);
+      if (ventaActiva.found && ventaActiva.movimientoId != null) {
+        if (ventaActiva.statusPump) {
+          print('[HomePage] statusPump=true cara $cara → LazoExpress envía a enviar-fe-pump');
         } else {
-          print('[HomePage] Impresión auto: no se encontró movimiento para cara $cara (intento ${intento + 1})');
+          print('[HomePage] statusPump=false cara $cara → LazoExpress imprime localmente');
         }
-      } catch (e) {
-        print('[HomePage] Error en impresión automática cara $cara: $e');
+      } else {
+        print('[HomePage] No se encontró movimiento para cara $cara (LazoExpress aún lo procesa)');
       }
+    } catch (e) {
+      print('[HomePage] Error consultando venta para cara $cara: $e');
     }
-    
-    // Agoté reintentos sin éxito
-    print('[HomePage] Impresión auto: agotados reintentos para cara $cara');
-    if (mounted) {
-      TopNotification.show(
-        context,
-        message: 'No se pudo imprimir cara $cara',
-        subtitle: 'Agotados los reintentos. Puede imprimir desde historial.',
-        type: NotificationType.warning,
-        duration: const Duration(seconds: 8),
-      );
-    }
+  }
+
+  /// Mostrar diálogo de countdown para escanear QR de App Terpel
+  void _mostrarDialogoEscaneoQR(PaymentNotification notification) {
+    print('[HomePage] Mostrando diálogo de escaneo QR App Terpel');
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => ScanQRCountdownDialog(
+        mensaje: notification.mensaje,
+      ),
+    );
   }
 
   void _onMediosPago(int cara) {
@@ -615,3 +582,330 @@ class _HomePageState extends State<HomePage> {
 
 // El bottom sheet de medios de pago fue extraído a:
 // ../widgets/medios_pago_bottom_sheet.dart
+
+// ============================================================
+// DIÁLOGO COUNTDOWN ESCANEO QR - APP TERPEL
+// ============================================================
+// Se muestra cuando el orquestador envía el pago al servicio
+// appTerpelPaymentIntegration y notifica que el cliente
+// ya puede escanear el código QR (tipo: "pendiente").
+// Se auto-cierra al recibir la notificación de resultado.
+// ============================================================
+
+class ScanQRCountdownDialog extends StatefulWidget {
+  final String mensaje;
+
+  const ScanQRCountdownDialog({
+    super.key,
+    required this.mensaje,
+  });
+
+  @override
+  State<ScanQRCountdownDialog> createState() => _ScanQRCountdownDialogState();
+}
+
+class _ScanQRCountdownDialogState extends State<ScanQRCountdownDialog>
+    with SingleTickerProviderStateMixin {
+  
+  static const int _tiempoTotal = 90;
+  late AnimationController _countdownController;
+  int _segundosRestantes = _tiempoTotal;
+  StreamSubscription<PaymentNotification>? _wsSubscription;
+  bool _resultadoRecibido = false;
+  bool _aprobado = false;
+  String _mensajeResultado = '';
+
+  @override
+  void initState() {
+    super.initState();
+    PaymentWebSocketService().countdownDialogActive = true;
+    _countdownController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: _tiempoTotal),
+    );
+
+    _countdownController.addListener(() {
+      if (!mounted) return;
+      final remaining = (_tiempoTotal * (1 - _countdownController.value)).ceil();
+      if (remaining != _segundosRestantes) {
+        setState(() => _segundosRestantes = remaining);
+      }
+    });
+
+    _countdownController.addStatusListener((status) {
+      if (status == AnimationStatus.completed && mounted && !_resultadoRecibido) {
+        setState(() {
+          _mensajeResultado = 'El tiempo para escanear el QR ha finalizado';
+        });
+      }
+    });
+
+    _countdownController.forward();
+    _escucharResultado();
+  }
+
+  @override
+  void dispose() {
+    PaymentWebSocketService().countdownDialogActive = false;
+    _wsSubscription?.cancel();
+    _countdownController.dispose();
+    super.dispose();
+  }
+
+  void _escucharResultado() {
+    _wsSubscription = PaymentWebSocketService().notificationStream.listen((notification) {
+      if (!mounted) return;
+      if (!notification.isAppTerpel) return;
+      // Ignorar notificaciones pendientes duplicadas
+      if (notification.isPendiente) return;
+
+      print('[ScanQRDialog] Resultado recibido: ${notification.titulo} - ${notification.estado}');
+
+      setState(() {
+        _resultadoRecibido = true;
+        _aprobado = notification.isAprobado;
+        _mensajeResultado = notification.mensaje;
+        _countdownController.stop();
+      });
+
+      // Auto cerrar después de 3 segundos si fue aprobado
+      if (notification.isAprobado) {
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) Navigator.of(context).pop();
+        });
+      }
+    });
+  }
+
+  Color get _colorProgreso {
+    if (_resultadoRecibido) return _aprobado ? Colors.green : Colors.red;
+    if (_segundosRestantes > 30) return const Color(0xFF6A1B9A);
+    if (_segundosRestantes > 10) return Colors.orange;
+    return Colors.red;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      contentPadding: EdgeInsets.zero,
+      content: SizedBox(
+        width: 400,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header púrpura
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: _resultadoRecibido
+                    ? (_aprobado ? Colors.green : Colors.red)
+                    : const Color(0xFF6A1B9A),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _resultadoRecibido
+                        ? (_aprobado ? Icons.check_circle : Icons.cancel)
+                        : Icons.qr_code_scanner,
+                    color: Colors.white, size: 32,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _resultadoRecibido
+                              ? (_aprobado ? 'PAGO APROBADO' : 'PAGO RECHAZADO')
+                              : 'ESCANEE CÓDIGO QR',
+                          style: const TextStyle(
+                            color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'APP TERPEL',
+                          style: TextStyle(color: Colors.white.withAlpha(200), fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Contenido
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  // Countdown circular (solo si no hay resultado)
+                  if (!_resultadoRecibido) ...[
+                    SizedBox(
+                      width: 120,
+                      height: 120,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SizedBox(
+                            width: 120,
+                            height: 120,
+                            child: CircularProgressIndicator(
+                              value: 1 - _countdownController.value,
+                              strokeWidth: 8,
+                              color: _colorProgreso,
+                              backgroundColor: Colors.grey.shade200,
+                            ),
+                          ),
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '$_segundosRestantes',
+                                style: TextStyle(
+                                  fontSize: 36,
+                                  fontWeight: FontWeight.bold,
+                                  color: _colorProgreso,
+                                ),
+                              ),
+                              Text('seg',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+
+                  // Icono de resultado
+                  if (_resultadoRecibido) ...[
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: (_aprobado ? Colors.green : Colors.red).withAlpha(25),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _aprobado ? Icons.check_circle : Icons.cancel,
+                        size: 56,
+                        color: _aprobado ? Colors.green : Colors.red,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Mensaje principal
+                  Text(
+                    _resultadoRecibido
+                        ? _mensajeResultado
+                        : widget.mensaje,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: _resultadoRecibido ? _colorProgreso : Colors.grey.shade800,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+
+                  // Instrucciones QR (solo cuando pendiente)
+                  if (!_resultadoRecibido) ...[
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6A1B9A).withAlpha(12),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF6A1B9A).withAlpha(40)),
+                      ),
+                      child: Column(
+                        children: [
+                          _buildInstruccion(Icons.qr_code_2, 'Escanee el código QR con la App Terpel'),
+                          const Divider(height: 16),
+                          _buildInstruccion(Icons.keyboard, 'O ingrese el código manualmente'),
+                          const Divider(height: 16),
+                          _buildInstruccion(Icons.timer, 'Tiene aproximadamente 90 segundos'),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // Sugerencia cuando rechazado
+                  if (_resultadoRecibido && !_aprobado) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withAlpha(20),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.withAlpha(80)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.orange, size: 18),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Debe gestionar la venta con otro medio de pago',
+                              style: TextStyle(fontSize: 12, color: Colors.orange),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            // Botón cerrar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _resultadoRecibido
+                        ? (_aprobado ? Colors.green : Colors.red)
+                        : const Color(0xFF6A1B9A),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text(
+                    _resultadoRecibido
+                        ? (_aprobado ? 'CERRAR' : 'CERRAR - ASIGNAR OTRO MEDIO')
+                        : 'ACEPTAR',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInstruccion(IconData icono, String texto) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF6A1B9A).withAlpha(20),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icono, color: const Color(0xFF6A1B9A), size: 22),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(texto,
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+        ),
+      ],
+    );
+  }
+}

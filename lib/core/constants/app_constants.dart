@@ -7,9 +7,9 @@ class AppConstants {
   static const String greeting = 'Hola Diego 👋';
 
   // Layout Constants
-  static const double headerHeight = 100.0;
+  static const double headerHeight = 56.0;
   static const double sidebarWidth = 70.0;
-  static const double rightPanelWidth = 300.0;
+  static const double rightPanelWidth = 220.0;
 
   // Animation Constants
   static const Duration animationDuration = Duration(seconds: 3);

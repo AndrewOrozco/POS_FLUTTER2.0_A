@@ -175,13 +175,16 @@ class _CanastillaPageState extends State<CanastillaPage> {
     setState(() => _carrito.removeAt(idx));
   }
 
+  // Subtotal = base sin impuestos (como Java: precio - IVA incluido)
   double get _subtotalCarrito =>
-      _carrito.fold(0.0, (s, i) => s + i.subtotal);
+      _carrito.fold(0.0, (s, i) => s + (i.subtotal - i.impuestoTotal));
 
   double get _impuestoCarrito =>
       _carrito.fold(0.0, (s, i) => s + i.impuestoTotal);
 
-  double get _totalCarrito => _subtotalCarrito;
+  // Total = precio completo (subtotal incluye el impuesto)
+  double get _totalCarrito =>
+      _carrito.fold(0.0, (s, i) => s + i.subtotal);
 
   int get _totalItemsCarrito =>
       _carrito.fold(0, (s, i) => s + i.cantidad);

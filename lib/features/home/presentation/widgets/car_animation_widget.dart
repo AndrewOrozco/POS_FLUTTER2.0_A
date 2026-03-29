@@ -82,12 +82,12 @@ class _CarAnimationWidgetState extends State<CarAnimationWidget>
                 ),
               ),
 
-              // Carro en movimiento (imagen real) - va hacia la estación
+              // Carro en movimiento (imagen Terpel) - va hacia la estación
               Positioned(
                 right: 100 - carPosition,
                 top: 50,
                 child: Image.asset(
-                  'assets/images/car.png',
+                  'assets/icons/terpel/car_terpel.png',
                   width: 70,
                   height: 35,
                   fit: BoxFit.contain,

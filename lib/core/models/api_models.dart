@@ -857,6 +857,8 @@ class ImpuestoProducto {
   final double porcentaje;
   final double valor;
   final bool ivaIncluido;
+  /// Tipo de impuesto: '%' = porcentaje, '$' = valor fijo
+  final String tipoImpuesto;
 
   ImpuestoProducto({
     this.id = 0,
@@ -864,15 +866,21 @@ class ImpuestoProducto {
     this.porcentaje = 0,
     this.valor = 0,
     this.ivaIncluido = false,
+    this.tipoImpuesto = '%',
   });
 
   factory ImpuestoProducto.fromJson(Map<String, dynamic> json) {
+    // DB: porcentaje_valor = tipo ('%' o '$'), valor = número real
+    final tipo = json['porcentaje_valor']?.toString() ?? '%';
+    final valorNum = parseDouble(json['valor']);
     return ImpuestoProducto(
       id: parseInt(json['impuesto_id'] ?? json['id']),
       descripcion: json['descripcion']?.toString() ?? '',
-      porcentaje: parseDouble(json['porcentaje_valor'] ?? json['porcentaje']),
-      valor: parseDouble(json['valor']),
+      // Para '%': valor es el porcentaje (ej: 19). Para '$': porcentaje=0
+      porcentaje: tipo == '%' ? valorNum : 0,
+      valor: valorNum,
       ivaIncluido: json['iva_incluido'] == true || json['iva_incluido'] == 'S',
+      tipoImpuesto: tipo,
     );
   }
 
@@ -977,10 +985,16 @@ class ProductoCanastilla {
   double calcularImpuesto(int cantidad) {
     double total = 0;
     for (final imp in impuestos) {
-      if (imp.ivaIncluido) {
-        total += (precio * cantidad) - ((precio * cantidad) / (1 + imp.porcentaje / 100));
+      if (imp.tipoImpuesto == r'$') {
+        // Impuesto fijo por unidad (ej: IMPOCONSUMO $0)
+        total += imp.valor * cantidad;
       } else {
-        total += (precio * cantidad) * (imp.porcentaje / 100);
+        // Impuesto porcentual (ej: IVA 19%)
+        if (imp.ivaIncluido) {
+          total += (precio * cantidad) - ((precio * cantidad) / (1 + imp.porcentaje / 100));
+        } else {
+          total += (precio * cantidad) * (imp.porcentaje / 100);
+        }
       }
     }
     return total;

@@ -4,11 +4,14 @@ import 'package:provider/provider.dart';
 import '../../../../core/services/api_consultas_service.dart';
 import '../../../../core/providers/session_provider.dart';
 import '../../../../core/widgets/teclado_tactil.dart';
+import '../../../../core/theme/app_theme.dart';
 
 /// Pagina principal de Turnos
 /// Muestra turnos activos y permite iniciar/cerrar turno
 class TurnosPage extends StatefulWidget {
-  const TurnosPage({super.key});
+  final bool autoIniciar;
+  final bool autoCerrar;
+  const TurnosPage({super.key, this.autoIniciar = false, this.autoCerrar = false});
 
   @override
   State<TurnosPage> createState() => _TurnosPageState();
@@ -22,7 +25,14 @@ class _TurnosPageState extends State<TurnosPage> {
   @override
   void initState() {
     super.initState();
-    _cargarTurnos();
+    _cargarTurnos().then((_) {
+      if (!mounted) return;
+      if (widget.autoIniciar) {
+        _abrirIniciarTurno();
+      } else if (widget.autoCerrar) {
+        _abrirCerrarTurno();
+      }
+    });
   }
 
   Future<void> _cargarTurnos() async {
@@ -74,201 +84,174 @@ class _TurnosPageState extends State<TurnosPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.red.shade700, Colors.red.shade900],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(context),
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
+      backgroundColor: const Color(0xFFF5F6FA),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(context),
+            Expanded(
+              child: _cargando
+                  ? const Center(child: CircularProgressIndicator())
+                  : RefreshIndicator(
+                      onRefresh: _cargarTurnos,
+                      child: ListView(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        children: [
+                          // ── Turno Actual section ──
+                          _buildSectionTitle(
+                            icon: Icons.person_rounded,
+                            title: 'Turno Actual',
+                            count: _turnosActivos.length,
+                          ),
+                          const SizedBox(height: 12),
+                          if (_turnosActivos.isNotEmpty)
+                            ..._turnosActivos.map((t) => Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _TurnoCard(turno: t),
+                            ))
+                          else
+                            _buildEmptyState(),
+                          const SizedBox(height: 24),
+                          // ── Botones de acción ──
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: _abrirIniciarTurno,
+                                  icon: const Icon(Icons.play_arrow_rounded, size: 22),
+                                  label: const Text('INICIAR TURNO', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green.shade600,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                    elevation: 2,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: _turnosActivos.isNotEmpty ? _abrirCerrarTurno : null,
+                                  icon: const Icon(Icons.stop_rounded, size: 22),
+                                  label: const Text('CERRAR TURNO', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.terpeRed,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                    elevation: 2,
+                                    disabledBackgroundColor: Colors.grey.shade300,
+                                    disabledForegroundColor: Colors.grey.shade500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      _buildTitle(),
-                      const Divider(height: 1),
-                      _buildBotones(),
-                      const Divider(height: 1),
-                      Expanded(child: _buildListaTurnos()),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+                    ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Row(
         children: [
-          Material(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(12),
-            child: InkWell(
-              onTap: () => Navigator.of(context).pop(),
-              borderRadius: BorderRadius.circular(12),
-              child: const Padding(
-                padding: EdgeInsets.all(12),
-                child: Icon(Icons.arrow_back_rounded, color: Colors.white, size: 28),
-              ),
+          InkWell(
+            onTap: () => Navigator.of(context).pop(),
+            borderRadius: BorderRadius.circular(8),
+            child: const Padding(
+              padding: EdgeInsets.all(8),
+              child: Icon(Icons.arrow_back_rounded, color: Color(0xFF333333), size: 24),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           const Text(
             'Gestionar Turnos',
-            style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+            style: TextStyle(color: Color(0xFF333333), fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const Spacer(),
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              color: AppTheme.terpeRed.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(Icons.schedule_rounded, color: Colors.red.shade700, size: 40),
+            child: Icon(Icons.schedule_rounded, color: AppTheme.terpeRed, size: 24),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTitle() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 32),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.red.shade50,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(Icons.people_alt_rounded, color: Colors.red.shade700, size: 32),
-          ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Turnos Activos',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
-              ),
-              Text(
-                '${_turnosActivos.length} promotor(es) en turno',
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBotones() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
-      child: Row(
-        children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: _abrirIniciarTurno,
-              icon: const Icon(Icons.play_arrow_rounded, size: 28),
-              label: const Text('INICIAR TURNO', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green.shade600,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 4,
-              ),
-            ),
-          ),
-          const SizedBox(width: 24),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: _turnosActivos.isNotEmpty ? _abrirCerrarTurno : null,
-              icon: const Icon(Icons.stop_rounded, size: 28),
-              label: const Text('CERRAR TURNO', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.shade600,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 4,
-                disabledBackgroundColor: Colors.grey.shade300,
-                disabledForegroundColor: Colors.grey.shade500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildListaTurnos() {
-    if (_cargando) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_turnosActivos.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.person_off_rounded, size: 64, color: Colors.grey.shade400),
-            const SizedBox(height: 16),
-            Text(
-              'Sin turnos activos',
-              style: TextStyle(fontSize: 18, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Inicie un turno para comenzar a operar',
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
-            ),
-          ],
+  Widget _buildSectionTitle({required IconData icon, required String title, required int count}) {
+    return Row(
+      children: [
+        Icon(icon, color: AppTheme.terpeRed, size: 22),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
         ),
-      );
-    }
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: count > 0 ? Colors.green.shade100 : Colors.grey.shade200,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            '$count',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: count > 0 ? Colors.green.shade700 : Colors.grey.shade600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
-    return RefreshIndicator(
-      onRefresh: _cargarTurnos,
-      child: ListView.separated(
-        padding: const EdgeInsets.all(24),
-        itemCount: _turnosActivos.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          final turno = _turnosActivos[index];
-          return _TurnoCard(turno: turno);
-        },
+  Widget _buildEmptyState() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 48),
+      child: Column(
+        children: [
+          Icon(Icons.person_off_rounded, size: 56, color: Colors.grey.shade300),
+          const SizedBox(height: 12),
+          Text(
+            'Sin turnos activos',
+            style: TextStyle(fontSize: 16, color: Colors.grey.shade500, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Inicie un turno para comenzar a operar',
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// Card para mostrar un turno activo
+/// Card premium para mostrar un turno activo
 class _TurnoCard extends StatelessWidget {
   final Map<String, dynamic> turno;
 
@@ -282,60 +265,103 @@ class _TurnoCard extends StatelessWidget {
     final saldo = turno['saldo'] ?? 0;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.green.shade50,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.green.shade200),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Avatar
           Container(
-            padding: const EdgeInsets.all(12),
+            width: 52,
+            height: 52,
             decoration: BoxDecoration(
-              color: Colors.green.shade100,
-              borderRadius: BorderRadius.circular(12),
+              color: Colors.green.shade50,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.green.shade200, width: 2),
             ),
-            child: Icon(Icons.person_rounded, color: Colors.green.shade700, size: 32),
+            child: Icon(Icons.person_rounded, color: Colors.green.shade600, size: 28),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
+          // Name, ID, date
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   nombre,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A)),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  'ID: $identificacion',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                Row(
+                  children: [
+                    Icon(Icons.badge_outlined, size: 14, color: Colors.grey.shade500),
+                    const SizedBox(width: 4),
+                    Text(
+                      'ID: $identificacion',
+                      style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                    ),
+                  ],
                 ),
-                Text(
-                  'Inicio: $fechaInicio',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Icon(Icons.schedule_outlined, size: 14, color: Colors.grey.shade500),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Inicio: $fechaInicio',
+                      style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                // Saldo inline
+                Row(
+                  children: [
+                    Icon(Icons.account_balance_wallet_outlined, size: 14, color: Colors.grey.shade500),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Saldo: \$$saldo',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade600,
-                  borderRadius: BorderRadius.circular(20),
+          // Active badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.green.shade300),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade600,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-                child: const Text('ACTIVO', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Saldo: \$$saldo',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.green.shade700),
-              ),
-            ],
+                const SizedBox(width: 5),
+                Text('Activo', style: TextStyle(color: Colors.green.shade700, fontSize: 12, fontWeight: FontWeight.w600)),
+              ],
+            ),
           ),
         ],
       ),
@@ -393,12 +419,22 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
   @override
   void initState() {
     super.initState();
+    _usuarioController.addListener(_onTextoChanged);
+    _passwordController.addListener(_onTextoChanged);
+    _saldoController.addListener(_onTextoChanged);
     _verificarEstadoInicial();
+  }
+
+  void _onTextoChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     _rfidPolling = false;
+    _usuarioController.removeListener(_onTextoChanged);
+    _passwordController.removeListener(_onTextoChanged);
+    _saldoController.removeListener(_onTextoChanged);
     _usuarioController.dispose();
     _passwordController.dispose();
     _saldoController.dispose();
@@ -509,23 +545,28 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
       final lectura = await _apiService.getLecturaIdentificadorRumbo(
         cara: 1,
         segundosEspera: 25,
+        tipo: 'turno',
       );
 
       if (!mounted || !_rfidPolling) return;
 
       if (lectura != null) {
         print('[TurnoWizard] RFID detectado: $lectura');
-        // serial = promotorIdentificador (cedula), promotor_id = personas.id en BD
+        // serial = RFID tag serial, promotor_id = personas.id en BD (resuelto por Core)
         final cedula = lectura['serial']?.toString() ?? '';
         final nombre = lectura['promotor_nombre']?.toString() ?? '';
+        final promotorId = int.tryParse(lectura['promotor_id']?.toString() ?? '') ?? 0;
 
-        if (cedula.isNotEmpty) {
-          // Validar promotor por cedula
-          final result = await _apiService.validarPromotor(cedula);
+        if (cedula.isNotEmpty || promotorId > 0) {
+          // Validar promotor: preferir por personas_id (más confiable desde RFID)
+          final result = await _apiService.validarPromotor(cedula, personasId: promotorId);
           if (!mounted) return;
+
+          print('[TurnoWizard] validarPromotor result: ${result['exito']} mensaje: ${result['mensaje'] ?? 'OK'}');
 
           if (result['exito'] == true) {
             final promotor = result['promotor'] as Map<String, dynamic>;
+            print('[TurnoWizard] Promotor encontrado: nombre=${promotor['nombre']} ident=${promotor['identificacion']} pin=${promotor['pin']}');
             setState(() {
               _usuarioController.text = promotor['identificacion']?.toString() ?? cedula;
               _passwordController.text = promotor['pin']?.toString() ?? '';
@@ -534,20 +575,42 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
               _rfidNombre = promotor['nombre']?.toString() ?? nombre;
               _loginError = null;
             });
+            print('[TurnoWizard] Controllers: usuario=${_usuarioController.text} pwd=${_passwordController.text}');
+            print('[TurnoWizard] Estado: pasoActual=$_pasoActual necesitaSurt=$_necesitaSurtidores puedeContinuar=$_puedeContinuarSurtidores');
 
             // Si estamos en paso surtidores, avanzar al login
             if (_pasoActual == 0 && _necesitaSurtidores && _puedeContinuarSurtidores) {
+              print('[TurnoWizard] -> Avanzando a login (surtidores listos)');
               setState(() => _pasoActual = 1);
             } else if (_pasoActual == 0 && !_necesitaSurtidores) {
+              print('[TurnoWizard] -> Avanzando a login (no necesita surtidores)');
               setState(() => _pasoActual = 1);
             }
 
             // Auto-submit si ya estamos en login
             if (_pasoActual == 1) {
+              print('[TurnoWizard] -> AUTO-INIT: llamando _iniciarTurno()');
               await Future.delayed(const Duration(milliseconds: 500));
               if (mounted) _iniciarTurno();
+              return; // Turno iniciado, no seguir polling
+            }
+
+            // Si aún estamos en paso 0 (surtidores no listos),
+            // los datos del promotor quedan pre-llenados.
+            // Continuar polling por si pasa otra lectura RFID.
+            print('[TurnoWizard] RFID guardado pero pasoActual=$_pasoActual, esperando surtidores');
+            if (_rfidPolling && mounted) {
+              _hacerPollRfid();
             }
             return;
+          } else {
+            // Promotor no encontrado - mostrar error en UI
+            print('[TurnoWizard] Promotor no encontrado: ${result['mensaje']}');
+            setState(() {
+              _rfidDetectado = false;
+              _rfidNombre = null;
+              _loginError = result['mensaje']?.toString() ?? 'Promotor no encontrado';
+            });
           }
         }
       }
@@ -627,14 +690,107 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
     if (resultado['exito'] == true) {
       _rfidPolling = false;
       widget.onTurnoIniciado();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Turno iniciado para ${promotor['nombre']}'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 3),
-        ),
+      final nombre = promotor['nombre'] ?? 'Promotor';
+      // Diálogo de éxito — NO se puede cerrar tocando ni con back
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        barrierColor: Colors.black38,
+        builder: (ctx) {
+          Future.delayed(const Duration(seconds: 2), () {
+            if (ctx.mounted) Navigator.of(ctx).pop();
+          });
+          return PopScope(
+            canPop: false,
+            child: Center(
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: 320,
+                  padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.green.withOpacity(0.3),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.check_circle_rounded, color: Colors.green.shade600, size: 48),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        '¡Turno Iniciado!',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF2E7D32)),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        nombre,
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.grey.shade700),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'ID: ${promotor['identificacion'] ?? usuario}',
+                        style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       );
-      Navigator.of(context).pop();
+      // Overlay de carga "Volviendo al inicio..."
+      if (mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          barrierColor: Colors.black54,
+          builder: (ctx) {
+            Future.delayed(const Duration(milliseconds: 1200), () {
+              if (ctx.mounted) Navigator.of(ctx).pop();
+            });
+            return PopScope(
+              canPop: false,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Volviendo al inicio...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      }
+      // Ir a home
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
     } else {
       setState(() {
         _loginError = resultado['mensaje'] ?? 'Error al iniciar turno';
@@ -653,7 +809,7 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Colors.red.shade700, Colors.red.shade900],
+              colors: [const Color(0xFF4A4A4A), const Color(0xFF333333)],
             ),
           ),
           child: const Center(
@@ -676,7 +832,7 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.red.shade700, Colors.red.shade900],
+            colors: [const Color(0xFF4A4A4A), const Color(0xFF333333)],
           ),
         ),
         child: SafeArea(
@@ -687,7 +843,7 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
                 child: Container(
                   margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: const Color(0xFFF0F0F0),
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
@@ -773,24 +929,47 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
   // ---- PASO SURTIDORES ----
 
   Widget _buildPasoSurtidores() {
+    final int selCount = _surtidoresSeleccionados.length;
     return Column(
       children: [
+        // ── Header con ícono, título, contador ──
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           color: Colors.red.shade50,
           child: Row(
             children: [
-              Icon(Icons.local_gas_station_rounded, color: Colors.red.shade700, size: 24),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'Seleccione los surtidores para leer totalizadores',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF333333)),
+              // Ícono gasolina en contenedor rojo
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.local_gas_station_rounded, color: Colors.red.shade700, size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Selecciona surtidores',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF333333)),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      selCount == 0
+                          ? 'Puedes elegir varios'
+                          : '$selCount seleccionado${selCount > 1 ? 's' : ''}',
+                      style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
+        // ── Grid de surtidores ──
         Expanded(
           child: _cargandoSurtidores
               ? const Center(child: CircularProgressIndicator())
@@ -802,7 +981,7 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
                         crossAxisCount: 3,
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 12,
-                        childAspectRatio: 1.6,
+                        childAspectRatio: 2.2,
                       ),
                       itemCount: _surtidoresDisponibles.length,
                       itemBuilder: (context, index) {
@@ -818,6 +997,7 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
                       },
                     ),
         ),
+        // ── Botón CONTINUAR con count ──
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -826,17 +1006,27 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              ElevatedButton.icon(
+              ElevatedButton(
                 onPressed: _puedeContinuarSurtidores
                     ? () => setState(() => _pasoActual = 1)
                     : null,
-                icon: const Icon(Icons.arrow_forward_rounded),
-                label: const Text('CONTINUAR', style: TextStyle(fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red.shade600,
                   foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey.shade300,
                   padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      selCount > 0 ? 'CONTINUAR ($selCount)' : 'CONTINUAR',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.arrow_forward_rounded, size: 20),
+                  ],
                 ),
               ),
             ],
@@ -991,17 +1181,15 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
             ],
           ),
         ),
-        // Zona inferior: teclado numerico
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.red.shade700,
-            border: Border(top: BorderSide(color: Colors.red.shade800, width: 2)),
-          ),
-          child: SizedBox(
-            height: 220,
+        // Zona inferior: teclado numerico flotante
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Center(
             child: TecladoTactil(
               controller: _controllerActivo,
               soloNumeros: true,
+              height: 210,
+              colorTema: const Color(0xFFBA0C2F), // Rojo Terpel solo aquí
             ),
           ),
         ),
@@ -1027,23 +1215,23 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: activo ? Colors.red.shade700 : Colors.grey.shade600,
+              color: activo ? const Color(0xFFE65100) : Colors.grey.shade600,
             ),
           ),
           const SizedBox(height: 4),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: activo ? Colors.red.shade50 : Colors.grey.shade50,
+              color: activo ? const Color(0xFFFFF3E0) : Colors.grey.shade50,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: activo ? Colors.red.shade400 : Colors.grey.shade300,
+                color: activo ? const Color(0xFFFF8C00) : Colors.grey.shade300,
                 width: activo ? 2 : 1,
               ),
             ),
             child: Row(
               children: [
-                Icon(icon, size: 20, color: activo ? Colors.red.shade700 : Colors.grey.shade500),
+                Icon(icon, size: 20, color: activo ? const Color(0xFFE65100) : Colors.grey.shade500),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -1071,7 +1259,7 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          color: Colors.red.shade700,
+          color: const Color(0xFF424242),
           child: const Text(
             'TURNOS ACTIVOS',
             style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
@@ -1080,20 +1268,20 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
         // Header de tabla
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          color: Colors.red.shade50,
+          color: Colors.grey.shade100,
           child: Row(
             children: [
               Expanded(
                 flex: 3,
-                child: Text('PROMOTOR', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.red.shade700)),
+                child: Text('PROMOTOR', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey.shade700)),
               ),
               Expanded(
                 flex: 2,
-                child: Text('IDENTIFICACION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.red.shade700)),
+                child: Text('IDENTIFICACION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey.shade700)),
               ),
               Expanded(
                 flex: 3,
-                child: Text('F. INICIO', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.red.shade700)),
+                child: Text('F. INICIO', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey.shade700)),
               ),
             ],
           ),
@@ -1152,8 +1340,8 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
 }
 
 
-/// Card para un surtidor en la seleccion
-class _SurtidorCard extends StatelessWidget {
+/// Card para un surtidor en la seleccion — diseño compacto tipo mockup
+class _SurtidorCard extends StatefulWidget {
   final int numero;
   final bool seleccionado;
   final String? estado;
@@ -1167,65 +1355,200 @@ class _SurtidorCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    Color bgColor;
-    Color borderColor;
-    Widget trailing;
+  State<_SurtidorCard> createState() => _SurtidorCardState();
+}
 
-    if (!seleccionado) {
-      bgColor = Colors.grey.shade50;
-      borderColor = Colors.grey.shade300;
-      trailing = const SizedBox();
-    } else if (estado == 'cargando') {
-      bgColor = Colors.blue.shade50;
-      borderColor = Colors.blue.shade300;
-      trailing = const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2));
-    } else if (estado == 'ok') {
-      bgColor = Colors.green.shade50;
-      borderColor = Colors.green.shade400;
-      trailing = Icon(Icons.check_circle_rounded, color: Colors.green.shade600, size: 24);
+class _SurtidorCardState extends State<_SurtidorCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _scaleController;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.96).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _scaleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool esCargando = widget.estado == 'cargando';
+    final bool esOk = widget.estado == 'ok';
+    final bool esError = widget.estado != null && !esOk && !esCargando;
+
+    // Colores del badge numérico
+    Color badgeBg;
+    Color badgeText;
+    if (widget.seleccionado) {
+      badgeBg = esError ? Colors.red.shade600 : Colors.green.shade600;
+      badgeText = Colors.white;
     } else {
-      bgColor = Colors.red.shade50;
-      borderColor = Colors.red.shade300;
-      trailing = Icon(Icons.error_rounded, color: Colors.red.shade600, size: 24);
+      badgeBg = Colors.grey.shade300;
+      badgeText = Colors.grey.shade700;
     }
 
-    return Material(
-      color: bgColor,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: estado == 'cargando' ? null : onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.all(12),
+    // Colores del borde y fondo
+    Color borderColor = widget.seleccionado
+        ? (esError ? Colors.red.shade400 : Colors.green.shade400)
+        : Colors.grey.shade200;
+    Color bgColor = widget.seleccionado
+        ? (esError ? Colors.red.shade50 : Colors.green.shade50)
+        : Colors.white;
+
+    // Status info
+    String statusText;
+    Color statusDotColor;
+    if (esCargando) {
+      statusText = 'Cargando...';
+      statusDotColor = Colors.blue.shade400;
+    } else if (esOk) {
+      statusText = 'Disponible';
+      statusDotColor = Colors.green.shade500;
+    } else if (esError) {
+      statusText = 'Sin comunicación';
+      statusDotColor = Colors.red.shade500;
+    } else {
+      statusText = 'Disponible';
+      statusDotColor = Colors.green.shade500;
+    }
+
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: GestureDetector(
+        onTapDown: (_) => _scaleController.forward(),
+        onTapUp: (_) {
+          _scaleController.reverse();
+          if (!esCargando) widget.onTap();
+        },
+        onTapCancel: () => _scaleController.reverse(),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
           decoration: BoxDecoration(
+            color: bgColor,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: borderColor, width: seleccionado ? 2 : 1),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Icon(
-                    Icons.local_gas_station_rounded,
-                    color: seleccionado ? Colors.green.shade700 : Colors.grey.shade500,
-                    size: 28,
-                  ),
-                  trailing,
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Surtidor $numero',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: seleccionado ? Colors.green.shade800 : Colors.grey.shade700,
-                ),
+            border: Border.all(
+              color: borderColor,
+              width: widget.seleccionado ? 2.0 : 1.0,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: widget.seleccionado
+                    ? borderColor.withOpacity(0.15)
+                    : Colors.black.withOpacity(0.04),
+                blurRadius: widget.seleccionado ? 8 : 4,
+                offset: const Offset(0, 2),
               ),
             ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Fila superior: Badge número + Título + Check ──
+                Row(
+                  children: [
+                    // Badge numérico
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: badgeBg,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${widget.numero}',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: badgeText,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // Título
+                    Expanded(
+                      child: Text(
+                        'Surtidor ${widget.numero}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade800,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    // Check badge (solo si seleccionado y OK)
+                    if (widget.seleccionado && esOk)
+                      Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade500,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.check_rounded, color: Colors.white, size: 16),
+                      )
+                    else if (esCargando)
+                      SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.blue.shade500,
+                        ),
+                      ),
+                  ],
+                ),
+                const Spacer(),
+                // ── Fila inferior: ícono fuel + status dot + texto ──
+                Row(
+                  children: [
+                    Icon(
+                      Icons.local_gas_station_rounded,
+                      size: 16,
+                      color: widget.seleccionado ? Colors.grey.shade600 : Colors.grey.shade400,
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: statusDotColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: Text(
+                        statusText,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: esError ? Colors.red.shade600 : Colors.green.shade700,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1368,7 +1691,7 @@ class _CerrarTurnoWizardState extends State<_CerrarTurnoWizard> {
   Future<void> _hacerPollRfid() async {
     if (_cerrando || _mensajeExito != null) return;
     try {
-      final lectura = await _apiService.getLecturaIdentificadorRumbo(cara: 1);
+      final lectura = await _apiService.getLecturaIdentificadorRumbo(cara: 1, tipo: 'turno');
       if (lectura != null && mounted) {
         _rfidTimer?.cancel();
 
@@ -1520,65 +1843,53 @@ class _CerrarTurnoWizardState extends State<_CerrarTurnoWizard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.red.shade700, Colors.red.shade900],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: _mensajeExito != null
-                      ? _buildExitoView()
-                      : _buildFormularioCierre(),
-                ),
-              ),
-            ],
-          ),
+      backgroundColor: const Color(0xFFF5F6FA),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: _mensajeExito != null
+                  ? _buildExitoView()
+                  : _buildFormularioCierre(),
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Row(
         children: [
-          Material(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(12),
-            child: InkWell(
-              onTap: () => Navigator.of(context).pop(),
-              borderRadius: BorderRadius.circular(12),
-              child: const Padding(
-                padding: EdgeInsets.all(12),
-                child: Icon(Icons.arrow_back_rounded, color: Colors.white, size: 28),
+          InkWell(
+            onTap: () => Navigator.of(context).pop(),
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.terpeRed.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
               ),
+              child: Icon(Icons.arrow_back_rounded, color: AppTheme.terpeRed, size: 22),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           const Text(
-            'CIERRE DE JORNADA',
-            style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+            'Cierre de Jornada',
+            style: TextStyle(color: Color(0xFF333333), fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const Spacer(),
           // Indicador de totalizadores
@@ -1586,26 +1897,31 @@ class _CerrarTurnoWizardState extends State<_CerrarTurnoWizard> {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
               color: _leyendoTotalizadores
-                  ? Colors.orange.shade100
-                  : Colors.green.shade100,
+                  ? Colors.orange.shade50
+                  : Colors.green.shade50,
               borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: _leyendoTotalizadores
+                    ? Colors.orange.shade200
+                    : Colors.green.shade200,
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (_leyendoTotalizadores)
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                  SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange.shade700),
                   )
                 else
-                  Icon(Icons.check_circle, color: Colors.green.shade700, size: 18),
-                const SizedBox(width: 8),
+                  Icon(Icons.check_circle, color: Colors.green.shade600, size: 16),
+                const SizedBox(width: 6),
                 Text(
                   _estadoTotalizadores,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.bold,
                     color: _leyendoTotalizadores
                         ? Colors.orange.shade800
@@ -1643,189 +1959,295 @@ class _CerrarTurnoWizardState extends State<_CerrarTurnoWizard> {
   }
 
   Widget _buildFormularioCierre() {
-    return Row(
+    return Column(
       children: [
-        // Lado izquierdo: formulario login + tabla turnos
+        // Contenido principal (scroll)
         Expanded(
-          flex: 3,
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: Column(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Titulo
-                Row(
-                  children: [
-                    Icon(Icons.lock_outline_rounded, color: Colors.red.shade700, size: 28),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Ingrese sus credenciales',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Ingrese su identificación y contraseña, o use RFID',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                ),
-                const SizedBox(height: 20),
-
-                // Campo USUARIO
-                _buildCampoTexto(
-                  label: 'USUARIO (Identificación)',
-                  controller: _usuarioController,
-                  activo: _campoActivo == 0,
-                  onTap: () => setState(() => _campoActivo = 0),
-                  icono: Icons.person_rounded,
-                ),
-                const SizedBox(height: 14),
-
-                // Campo CONTRASEÑA
-                _buildCampoTexto(
-                  label: 'CONTRASEÑA (PIN)',
-                  controller: _passwordController,
-                  activo: _campoActivo == 1,
-                  onTap: () => setState(() => _campoActivo = 1),
-                  icono: Icons.lock_rounded,
-                  obscure: true,
-                ),
-                const SizedBox(height: 20),
-
-                // Botón CERRAR TURNO
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _cerrando || _leyendoTotalizadores ? null : () => _cerrarTurno(),
-                    icon: _cerrando
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Icon(Icons.stop_rounded, size: 24),
-                    label: Text(
-                      _cerrando ? 'CERRANDO...' : 'CERRAR TURNO',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade600,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      disabledBackgroundColor: Colors.grey.shade400,
-                    ),
-                  ),
-                ),
-
-                // Error
-                if (_loginError != null) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.red.shade200),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _loginError!,
-                            style: TextStyle(color: Colors.red.shade800, fontWeight: FontWeight.w600, fontSize: 13),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                // Columna izquierda: alerta + turnos afectados
+                Expanded(
+                  flex: 1,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // ── Warning alert ──
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Colors.orange.shade200),
                         ),
-                      ],
-                    ),
-                  ),
-                ],
-
-                // RFID Status
-                if (_rfidMensaje.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: _rfidDetectado ? Colors.green.shade50 : Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: _rfidDetectado ? Colors.green.shade200 : Colors.blue.shade200,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _rfidDetectado ? Icons.nfc_rounded : Icons.sensors_rounded,
-                          color: _rfidDetectado ? Colors.green.shade700 : Colors.blue.shade700,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _rfidMensaje,
-                            style: TextStyle(
-                              color: _rfidDetectado ? Colors.green.shade800 : Colors.blue.shade800,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700, size: 28),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Cierre global de turnos',
+                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.orange.shade900),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Se cerrarán todos los turnos activos.',
+                                    style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                                  ),
+                                  Text(
+                                    'Esta acción no se puede deshacer.',
+                                    style: TextStyle(fontSize: 13, color: AppTheme.terpeRed, fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                              ),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // ── Turnos activos count + list ──
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Turnos activos: ${_turnosActivos.length}',
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Turnos afectados:',
+                              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                            ),
+                            const SizedBox(height: 8),
+                            _buildTurnosAfectados(),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 20),
+                // Columna derecha: credenciales + botón
+                Expanded(
+                  flex: 1,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── Credenciales ──
+                      Text(
+                        'Ingrese credenciales administrativas',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Row con campos lado a lado
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildCampoTexto(
+                              label: 'Usuario (ID o identificación)',
+                              controller: _usuarioController,
+                              activo: _campoActivo == 0,
+                              onTap: () => setState(() => _campoActivo = 0),
+                              icono: Icons.person_rounded,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildCampoTexto(
+                              label: 'PIN',
+                              controller: _passwordController,
+                              activo: _campoActivo == 1,
+                              onTap: () => setState(() => _campoActivo = 1),
+                              icono: Icons.lock_rounded,
+                              obscure: true,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // ── Error message ──
+                      if (_loginError != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.red.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.error_outline, color: Colors.red.shade700, size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _loginError!,
+                                  style: TextStyle(color: Colors.red.shade800, fontWeight: FontWeight.w600, fontSize: 13),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
+                        const SizedBox(height: 12),
                       ],
-                    ),
+
+                      // ── RFID Status ──
+                      if (_rfidMensaje.isNotEmpty) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: _rfidDetectado ? Colors.green.shade50 : Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: _rfidDetectado ? Colors.green.shade200 : Colors.blue.shade200,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                _rfidDetectado ? Icons.nfc_rounded : Icons.sensors_rounded,
+                                color: _rfidDetectado ? Colors.green.shade700 : Colors.blue.shade700,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _rfidMensaje,
+                                  style: TextStyle(
+                                    color: _rfidDetectado ? Colors.green.shade800 : Colors.blue.shade800,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+
+                      // ── Botón CERRAR TODOS ──
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _cerrando || _leyendoTotalizadores ? null : () => _cerrarTurno(),
+                          icon: _cerrando
+                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : const Icon(Icons.warning_amber_rounded, size: 22),
+                          label: Text(
+                            _cerrando ? 'CERRANDO...' : 'CERRAR TODOS LOS TURNOS ACTIVOS',
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.terpeRed,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            elevation: 0,
+                            disabledBackgroundColor: Colors.grey.shade400,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-
-                const SizedBox(height: 24),
-
-                // Tabla de turnos activos
-                const Text(
-                  'PROMOTORES EN TURNO',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF555555)),
                 ),
-                const SizedBox(height: 8),
-                _buildTablaTurnos(),
               ],
             ),
           ),
         ),
-
-        // Lado derecho: teclado numérico
-        Container(
-          width: 350,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: const BorderRadius.only(
-              topRight: Radius.circular(24),
-              bottomRight: Radius.circular(24),
+        // Teclado numérico compacto abajo
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Center(
+            child: TecladoTactil(
+              controller: _campoActivo == 0
+                  ? _usuarioController
+                  : _passwordController,
+              soloNumeros: true,
+              height: 210,
+              colorTema: const Color(0xFFBA0C2F),
             ),
-          ),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: Text(
-                  _campoActivo == 0 ? 'USUARIO' : 'CONTRASEÑA',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey.shade700),
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: TecladoTactil(
-                    controller: _campoActivo == 0
-                        ? _usuarioController
-                        : _passwordController,
-                    soloNumeros: true,
-                  ),
-                ),
-              ),
-            ],
           ),
         ),
       ],
+    );
+  }
+
+  /// Build the 'Turnos afectados' cards
+  Widget _buildTurnosAfectados() {
+    if (_cargando) {
+      return const Center(child: Padding(
+        padding: EdgeInsets.all(16),
+        child: CircularProgressIndicator(),
+      ));
+    }
+
+    if (_turnosActivos.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text('Sin turnos activos', style: TextStyle(color: Colors.grey.shade500)),
+      );
+    }
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 8,
+      children: _turnosActivos.map((turno) {
+        final nombre = turno['promotor_nombre'] ?? 'Sin nombre';
+        final fechaInicio = turno['fecha_inicio']?.toString() ?? '';
+        final horaInicio = _formatearFecha(fechaInicio);
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.green.shade50,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.green.shade200),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.check_circle, color: Colors.green.shade600, size: 16),
+              const SizedBox(width: 6),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    nombre,
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey.shade800),
+                  ),
+                  Text(
+                    'Inició: $horaInicio',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -1885,100 +2307,7 @@ class _CerrarTurnoWizardState extends State<_CerrarTurnoWizard> {
     );
   }
 
-  Widget _buildTablaTurnos() {
-    if (_cargando) {
-      return const Center(child: Padding(
-        padding: EdgeInsets.all(20),
-        child: CircularProgressIndicator(),
-      ));
-    }
-
-    if (_turnosActivos.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: const Text('Sin turnos activos', style: TextStyle(color: Colors.grey)),
-      );
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        children: [
-          // Encabezado
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.red.shade50,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(9),
-                topRight: Radius.circular(9),
-              ),
-            ),
-            child: const Row(
-              children: [
-                Expanded(flex: 3, child: Text('PROMOTOR', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
-                Expanded(flex: 2, child: Text('IDENTIFICACIÓN', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
-                Expanded(flex: 2, child: Text('F. INICIO', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
-              ],
-            ),
-          ),
-          // Filas
-          ...List.generate(_turnosActivos.length, (i) {
-            final turno = _turnosActivos[i];
-            return InkWell(
-              onTap: () {
-                // Al hacer clic en una fila, auto-llenar el usuario
-                setState(() {
-                  _usuarioController.text = turno['promotor_identificacion']?.toString() ?? '';
-                  _campoActivo = 1; // Mover al campo password
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: i.isEven ? Colors.white : Colors.grey.shade50,
-                  border: Border(top: BorderSide(color: Colors.grey.shade200)),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: Text(
-                        turno['promotor_nombre'] ?? '',
-                        style: const TextStyle(fontSize: 13),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        turno['promotor_identificacion']?.toString() ?? '',
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        _formatearFecha(turno['fecha_inicio']?.toString() ?? ''),
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
+  // _buildTablaTurnos removed — replaced by _buildTurnosAfectados
 
   String _formatearFecha(String fecha) {
     if (fecha.length >= 16) {

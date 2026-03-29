@@ -98,6 +98,7 @@ class PaymentWebSocketService {
         mensaje: json['mensaje']?.toString() ?? '',
         estado: json['estado'] == true,
         codigo: json['codigo']?.toString() ?? '0',
+        tipo: json['tipo']?.toString() ?? '',
       );
 
       print('[PaymentWS] Notificacion: ${notification.titulo} - '
@@ -163,16 +164,19 @@ class PaymentNotification {
   final String mensaje;  // "Pago Exitoso" o mensaje de error
   final bool estado;     // true = aprobado, false = rechazado
   final String codigo;   // "4" = APP TERPEL, "3" = GOPASS, "0" = otro
+  final String tipo;     // "pendiente" = listo para escanear, "" = resultado final
 
   PaymentNotification({
     required this.titulo,
     required this.mensaje,
     required this.estado,
     required this.codigo,
+    this.tipo = '',
   });
 
   bool get isAppTerpel => codigo == '4';
   bool get isGopass => codigo == '3';
   bool get isAprobado => estado;
   bool get isRechazado => !estado;
+  bool get isPendiente => tipo == 'pendiente';
 }

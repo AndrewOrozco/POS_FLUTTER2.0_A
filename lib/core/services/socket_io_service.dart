@@ -3,6 +3,11 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 /// Servicio singleton para manejar la conexión Socket.IO con Flask
 /// Escucha eventos de estado de surtidores en tiempo real
+///
+/// Reconexión robusta:
+///   - Socket.IO intenta reconectar hasta 99999 veces (prácticamente infinito)
+///   - Si Socket.IO agota sus reintentos, un Timer de respaldo destruye
+///     el socket viejo y crea uno nuevo cada 10 segundos
 class SocketIOService {
   static final SocketIOService _instance = SocketIOService._internal();
   factory SocketIOService() => _instance;
@@ -10,6 +15,11 @@ class SocketIOService {
 
   IO.Socket? _socket;
   bool _isConnected = false;
+  Timer? _reconnectTimer;
+
+  // Guardar host/port para poder reconectar desde el fallback
+  String _lastHost = 'http://127.0.0.1';
+  int _lastPort = 5000;
 
   // Stream controllers para eventos
   final StreamController<Map<String, dynamic>> _estadoSurtidorController =
@@ -27,10 +37,24 @@ class SocketIOService {
   /// Conectar al servidor Flask
   /// Por defecto usa localhost:5000 (donde corre Flask)
   void connect({String host = 'http://127.0.0.1', int port = 5000}) {
+    _lastHost = host;
+    _lastPort = port;
+
+    // Si ya está conectado, no hacer nada
     if (_socket != null && _isConnected) {
       print('[SocketIO] Ya está conectado');
       return;
     }
+
+    // Si el socket existe pero NO está conectado (quedó zombie),
+    // destruirlo y crear uno nuevo
+    if (_socket != null && !_isConnected) {
+      print('[SocketIO] Socket zombie detectado, destruyendo...');
+      _destroySocket();
+    }
+
+    // Cancelar cualquier timer de reconexión manual pendiente
+    _reconnectTimer?.cancel();
 
     final url = '$host:$port';
     print('[SocketIO] ====================================');
@@ -38,27 +62,28 @@ class SocketIOService {
     print('[SocketIO] ====================================');
 
     try {
-      // Crear socket con configuración específica para Flask-SocketIO
+      // Crear socket con reconexión robusta
       _socket = IO.io(
         url,
         <String, dynamic>{
           'transports': ['websocket'],
           'autoConnect': false,
           'reconnection': true,
-          'reconnectionAttempts': 10,
+          'reconnectionAttempts': 99999,  // Prácticamente infinito
           'reconnectionDelay': 2000,
           'reconnectionDelayMax': 10000,
           'timeout': 20000,
-          'forceNew': true,
+          // NO usar forceNew: interfiere con la reconexión automática
         },
       );
 
       _setupListeners();
       _socket!.connect();
-      print('[SocketIO] Socket creado con config manual, esperando conexión...');
+      print('[SocketIO] Socket creado, esperando conexión...');
     } catch (e) {
       print('[SocketIO] ERROR creando socket: $e');
       _connectionStatusController.add(false);
+      _scheduleFullReconnect();
     }
   }
 
@@ -67,6 +92,7 @@ class SocketIOService {
     _socket!.onConnect((_) {
       print('[SocketIO] ✅ Conectado al servidor Flask');
       _isConnected = true;
+      _reconnectTimer?.cancel(); // Cancelar reconexión manual si había
       _connectionStatusController.add(true);
     });
 
@@ -74,6 +100,7 @@ class SocketIOService {
       print('[SocketIO] ❌ Desconectado del servidor');
       _isConnected = false;
       _connectionStatusController.add(false);
+      // Socket.IO intentará reconectar automáticamente (hasta 99999 veces)
     });
 
     _socket!.onConnectError((error) {
@@ -83,9 +110,25 @@ class SocketIOService {
     });
 
     _socket!.onReconnect((_) {
-      print('[SocketIO] 🔄 Reconectado');
+      print('[SocketIO] 🔄 Reconectado exitosamente');
       _isConnected = true;
+      _reconnectTimer?.cancel();
       _connectionStatusController.add(true);
+    });
+
+    _socket!.onReconnectAttempt((attemptNumber) {
+      print('[SocketIO] 🔄 Intento de reconexión #$attemptNumber');
+    });
+
+    _socket!.onReconnectFailed((_) {
+      // Esto solo pasa si se agotan los 99999 intentos (muy raro)
+      // o si hay un error catastrófico. Activar reconexión manual.
+      print('[SocketIO] ⚠️ Reconexión Socket.IO agotada, activando respaldo manual...');
+      _scheduleFullReconnect();
+    });
+
+    _socket!.onReconnectError((error) {
+      print('[SocketIO] ⚠️ Error en reconexión: $error');
     });
 
     // Escuchar evento de estado de surtidor desde Flask
@@ -102,14 +145,36 @@ class SocketIOService {
     });
   }
 
-  /// Desconectar del servidor
-  void disconnect() {
+  /// Reconexión manual de respaldo:
+  /// Destruye el socket viejo y crea uno completamente nuevo.
+  /// Se activa cuando Socket.IO agota sus reintentos internos.
+  void _scheduleFullReconnect() {
+    _reconnectTimer?.cancel();
+    print('[SocketIO] ⏰ Reintento completo en 10 segundos...');
+    _reconnectTimer = Timer(const Duration(seconds: 10), () {
+      print('[SocketIO] 🔁 Ejecutando reconexión completa (nuevo socket)');
+      _destroySocket();
+      connect(host: _lastHost, port: _lastPort);
+    });
+  }
+
+  /// Destruir socket sin activar reconexión
+  void _destroySocket() {
     if (_socket != null) {
-      print('[SocketIO] Desconectando...');
+      _socket!.clearListeners();
       _socket!.disconnect();
       _socket!.dispose();
       _socket = null;
-      _isConnected = false;
+    }
+    _isConnected = false;
+  }
+
+  /// Desconectar del servidor (intencional, cancela todo)
+  void disconnect() {
+    _reconnectTimer?.cancel();
+    if (_socket != null) {
+      print('[SocketIO] Desconectando...');
+      _destroySocket();
       _connectionStatusController.add(false);
     }
   }

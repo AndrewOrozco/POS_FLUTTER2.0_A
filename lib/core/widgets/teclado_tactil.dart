@@ -2,12 +2,47 @@ import 'package:flutter/material.dart';
 
 /// Teclado táctil personalizado estilo Terpel
 /// 
-/// Soporta modo alfanumérico y numérico
+/// Diseño flotante compacto con paleta Terpel:
+/// - Gris oscuro de fondo (descansa la vista)
+/// - Rojo Terpel solo en acentos sutiles
+/// - Naranja para Aceptar, Verde para Borrar
+/// - Teclas claras sobre fondo oscuro
 class TecladoTactil extends StatelessWidget {
   final TextEditingController controller;
   final bool soloNumeros;
   final VoidCallback? onAceptar;
   final double? height;
+  /// Color tema opcional. Si se pasa, el teclado usa tonos de ese color.
+  /// Ejemplo: Color(0xFFBA0C2F) para rojo Terpel en Iniciar Turno.
+  final Color? colorTema;
+
+  // Colores default (gris oscuro)
+  static const _defaultBg = Color(0xFF2D2D2D);
+  static const _defaultKey = Color(0xFF404040);
+  static const _defaultKeyAlt = Color(0xFF4A4A4A);
+  static const _defaultBorder = Color(0xFF505050);
+
+  // Colores fijos
+  static const _textColor = Color(0xFFF5F5F5);
+  static const _accentOrange = Color(0xFFFF8C00);
+  static const _accentGreen = Color(0xFF43A047);
+
+  // Colores derivados del tema
+  Color get _bgColor => colorTema != null
+      ? HSLColor.fromColor(colorTema!).withLightness(0.18).withSaturation(0.6).toColor()
+      : _defaultBg;
+  Color get _keyColor => colorTema != null
+      ? HSLColor.fromColor(colorTema!).withLightness(0.25).withSaturation(0.5).toColor()
+      : _defaultKey;
+  Color get _keyColorAlt => colorTema != null
+      ? HSLColor.fromColor(colorTema!).withLightness(0.30).withSaturation(0.5).toColor()
+      : _defaultKeyAlt;
+  Color get _borderColor => colorTema != null
+      ? HSLColor.fromColor(colorTema!).withLightness(0.35).withSaturation(0.4).toColor()
+      : _defaultBorder;
+  Color get _spaceColor => colorTema != null
+      ? HSLColor.fromColor(colorTema!).withLightness(0.32).withSaturation(0.45).toColor()
+      : const Color(0xFF505050);
 
   const TecladoTactil({
     super.key,
@@ -15,6 +50,7 @@ class TecladoTactil extends StatelessWidget {
     this.soloNumeros = false,
     this.onAceptar,
     this.height,
+    this.colorTema,
   });
 
   @override
@@ -27,23 +63,41 @@ class TecladoTactil extends StatelessWidget {
 
   Widget _buildTecladoAlfanumerico() {
     return Container(
-      height: height ?? 280, // Más grande para pantallas táctiles
+      height: height ?? 260,
       decoration: BoxDecoration(
-        color: const Color(0xFFBA0C2F),
-        borderRadius: BorderRadius.circular(12),
+        color: _bgColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(80),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
+        border: Border.all(color: _borderColor.withAlpha(60), width: 0.5),
       ),
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: Column(
         children: [
+          // Indicador de arrastre sutil
+          Container(
+            width: 40,
+            height: 3,
+            margin: const EdgeInsets.only(bottom: 6),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade600,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
           // Fila 1: Q W E R T Y U I O P 1 2 3
           Expanded(child: _buildFila(['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '1', '2', '3'])),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           // Fila 2: A S D F G H J K L Ñ 4 5 6
           Expanded(child: _buildFila(['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ñ', '4', '5', '6'])),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           // Fila 3: Z X C V B N M , . : 7 8 9
           Expanded(child: _buildFila(['Z', 'X', 'C', 'V', 'B', 'N', 'M', ',', '.', ':', '7', '8', '9'])),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           // Fila 4: - @ [ESPACIO] _ % B 0 A
           Expanded(child: _buildFilaEspecial()),
         ],
@@ -53,23 +107,42 @@ class TecladoTactil extends StatelessWidget {
 
   Widget _buildTecladoNumerico() {
     return Container(
-      height: height ?? 280, // Más grande para pantallas táctiles
+      height: height ?? 260,
+      constraints: const BoxConstraints(maxWidth: 400),
       decoration: BoxDecoration(
-        color: const Color(0xFFBA0C2F),
-        borderRadius: BorderRadius.circular(12),
+        color: _bgColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(80),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
+        border: Border.all(color: _borderColor.withAlpha(60), width: 0.5),
       ),
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Column(
         children: [
+          // Indicador de arrastre
+          Container(
+            width: 40,
+            height: 3,
+            margin: const EdgeInsets.only(bottom: 6),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade600,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
           // Fila 1: 1 2 3
           Expanded(child: _buildFilaNumerica(['1', '2', '3'])),
-          const SizedBox(height: 8),
+          const SizedBox(height: 5),
           // Fila 2: 4 5 6
           Expanded(child: _buildFilaNumerica(['4', '5', '6'])),
-          const SizedBox(height: 8),
+          const SizedBox(height: 5),
           // Fila 3: 7 8 9
           Expanded(child: _buildFilaNumerica(['7', '8', '9'])),
-          const SizedBox(height: 8),
+          const SizedBox(height: 5),
           // Fila 4: B 0 A
           Expanded(child: _buildFilaAcciones()),
         ],
@@ -80,12 +153,15 @@ class TecladoTactil extends StatelessWidget {
   Widget _buildFila(List<String> teclas) {
     return Row(
       children: teclas.map((tecla) {
+        // Los números al final tienen un tono ligeramente distinto
+        final esNumero = int.tryParse(tecla) != null;
         return Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 1.5),
             child: _TeclaTactil(
               texto: tecla,
               onTap: () => _agregarCaracter(tecla),
+              bgColor: esNumero ? _keyColorAlt : _keyColor,
             ),
           ),
         );
@@ -98,10 +174,11 @@ class TecladoTactil extends StatelessWidget {
       children: teclas.map((tecla) {
         return Expanded(
           child: Padding(
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.symmetric(horizontal: 3),
             child: _TeclaTactil(
               texto: tecla,
               onTap: () => _agregarCaracter(tecla),
+              bgColor: _keyColor,
               grande: true,
             ),
           ),
@@ -116,20 +193,22 @@ class TecladoTactil extends StatelessWidget {
         // -
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 1.5),
             child: _TeclaTactil(
               texto: '-',
               onTap: () => _agregarCaracter('-'),
+              bgColor: _keyColor,
             ),
           ),
         ),
         // @
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 1.5),
             child: _TeclaTactil(
               texto: '@',
               onTap: () => _agregarCaracter('@'),
+              bgColor: _keyColor,
             ),
           ),
         ),
@@ -137,41 +216,44 @@ class TecladoTactil extends StatelessWidget {
         Expanded(
           flex: 4,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 1.5),
             child: _TeclaTactil(
               texto: 'ESPACIO',
               onTap: () => _agregarCaracter(' '),
+              bgColor: _spaceColor,
             ),
           ),
         ),
         // _
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 1.5),
             child: _TeclaTactil(
               texto: '_',
               onTap: () => _agregarCaracter('_'),
+              bgColor: _keyColor,
             ),
           ),
         ),
         // %
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 1.5),
             child: _TeclaTactil(
               texto: '%',
               onTap: () => _agregarCaracter('%'),
+              bgColor: _keyColor,
             ),
           ),
         ),
         // B (Borrar) - Verde
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 1.5),
             child: _TeclaTactil(
-              texto: 'B',
+              texto: '⌫',
               subtexto: 'BORRAR',
-              color: Colors.green,
+              bgColor: _accentGreen,
               onTap: _borrarCaracter,
             ),
           ),
@@ -179,21 +261,22 @@ class TecladoTactil extends StatelessWidget {
         // 0
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 1.5),
             child: _TeclaTactil(
               texto: '0',
               onTap: () => _agregarCaracter('0'),
+              bgColor: _keyColorAlt,
             ),
           ),
         ),
         // A (Aceptar) - Naranja
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 1.5),
             child: _TeclaTactil(
-              texto: 'A',
-              subtexto: 'ACEPTAR',
-              color: Colors.orange,
+              texto: '✓',
+              subtexto: 'OK',
+              bgColor: _accentOrange,
               onTap: onAceptar,
             ),
           ),
@@ -208,11 +291,11 @@ class TecladoTactil extends StatelessWidget {
         // B (Borrar) - Verde
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.symmetric(horizontal: 3),
             child: _TeclaTactil(
-              texto: 'B',
+              texto: '⌫',
               subtexto: 'BORRAR',
-              color: Colors.green,
+              bgColor: _accentGreen,
               onTap: _borrarCaracter,
               grande: true,
             ),
@@ -221,10 +304,11 @@ class TecladoTactil extends StatelessWidget {
         // 0
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.symmetric(horizontal: 3),
             child: _TeclaTactil(
               texto: '0',
               onTap: () => _agregarCaracter('0'),
+              bgColor: _keyColor,
               grande: true,
             ),
           ),
@@ -232,11 +316,11 @@ class TecladoTactil extends StatelessWidget {
         // A (Aceptar) - Naranja
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.symmetric(horizontal: 3),
             child: _TeclaTactil(
-              texto: 'A',
+              texto: '✓',
               subtexto: 'ACEPTAR',
-              color: Colors.orange,
+              bgColor: _accentOrange,
               onTap: onAceptar,
               grande: true,
             ),
@@ -288,14 +372,14 @@ class TecladoTactil extends StatelessWidget {
 class _TeclaTactil extends StatelessWidget {
   final String texto;
   final String? subtexto;
-  final Color? color;
+  final Color bgColor;
   final VoidCallback? onTap;
   final bool grande;
 
   const _TeclaTactil({
     required this.texto,
     this.subtexto,
-    this.color,
+    required this.bgColor,
     this.onTap,
     this.grande = false,
   });
@@ -303,21 +387,26 @@ class _TeclaTactil extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: color ?? Colors.transparent,
-      borderRadius: BorderRadius.circular(6),
+      color: bgColor,
+      borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(8),
+        splashColor: Colors.white.withAlpha(30),
+        highlightColor: Colors.white.withAlpha(15),
         child: Container(
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.white.withAlpha(80)),
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Colors.white.withAlpha(20),
+              width: 0.5,
+            ),
           ),
           child: Center(
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Padding(
-                padding: const EdgeInsets.all(4),
+                padding: const EdgeInsets.all(3),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
@@ -325,17 +414,18 @@ class _TeclaTactil extends StatelessWidget {
                     Text(
                       texto,
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: grande ? 32 : 18,
-                        fontWeight: FontWeight.bold,
+                        color: TecladoTactil._textColor,
+                        fontSize: grande ? 28 : 16,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     if (subtexto != null)
                       Text(
                         subtexto!,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
+                        style: TextStyle(
+                          color: TecladoTactil._textColor.withAlpha(180),
+                          fontSize: 8,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                   ],
@@ -440,7 +530,7 @@ class _CampoConTecladoState extends State<CampoConTeclado> {
           TecladoTactil(
             controller: widget.controller,
             soloNumeros: widget.soloNumeros,
-            height: widget.soloNumeros ? 320 : 320, // Más grande para táctil
+            height: widget.soloNumeros ? 280 : 280,
             onAceptar: () {
               setState(() => _mostrarTeclado = false);
               _focusNode.unfocus();
@@ -494,11 +584,11 @@ class _CampoPlacaState extends State<CampoPlaca> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'PLACA:',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Color(0xFFBA0C2F),
+            color: Colors.grey.shade800,
           ),
         ),
         const SizedBox(height: 8),
@@ -514,13 +604,13 @@ class _CampoPlacaState extends State<CampoPlaca> {
               color: Colors.grey.shade100,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: _mostrarTeclado ? const Color(0xFFBA0C2F) : Colors.grey.shade300,
+                color: _mostrarTeclado ? const Color(0xFFFF8C00) : Colors.grey.shade300,
                 width: _mostrarTeclado ? 2 : 1,
               ),
             ),
             child: Row(
               children: [
-                const Icon(Icons.directions_car, color: Color(0xFFBA0C2F), size: 28),
+                Icon(Icons.directions_car, color: Colors.grey.shade700, size: 28),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -552,7 +642,7 @@ class _CampoPlacaState extends State<CampoPlaca> {
           TecladoTactil(
             controller: widget.controller,
             soloNumeros: false,
-            height: 320, // Más grande para táctil
+            height: 280,
             onAceptar: () {
               setState(() => _mostrarTeclado = false);
             },
