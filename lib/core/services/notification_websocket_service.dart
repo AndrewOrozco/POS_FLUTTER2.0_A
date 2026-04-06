@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:flutter/foundation.dart';
 
 /// Servicio singleton para recibir notificaciones del backend Python (8020)
 /// via WebSocket (ws://localhost:8020/ws/notifications).
@@ -48,7 +49,7 @@ class NotificationWebSocketService {
     if (_isConnected) return;
 
     final url = 'ws://$_host:$_port/ws/notifications';
-    print('[NotificationWS] Conectando a: $url');
+    debugPrint('[NotificationWS] Conectando a: $url');
 
     try {
       _channel = WebSocketChannel.connect(Uri.parse(url));
@@ -59,21 +60,21 @@ class NotificationWebSocketService {
             _isConnected = true;
             _reconnectAttempts = 0;
             _connectionStatusController.add(true);
-            print('[NotificationWS] ✅ Conectado al backend Python');
+            debugPrint('[NotificationWS] ✅ Conectado al backend Python');
           }
           _onMessage(data);
         },
         onError: (error) {
-          print('[NotificationWS] Error: $error');
+          debugPrint('[NotificationWS] Error: $error');
           _onDisconnected();
         },
         onDone: () {
-          print('[NotificationWS] Conexión cerrada');
+          debugPrint('[NotificationWS] Conexión cerrada');
           _onDisconnected();
         },
       );
     } catch (e) {
-      print('[NotificationWS] Error al conectar: $e');
+      debugPrint('[NotificationWS] Error al conectar: $e');
       _isConnected = false;
       _connectionStatusController.add(false);
       _scheduleReconnect();
@@ -86,7 +87,7 @@ class NotificationWebSocketService {
 
       // Ignorar welcome messages
       if (json['type'] == 'connected') {
-        print('[NotificationWS] ${json['message']}');
+        debugPrint('[NotificationWS] ${json['message']}');
         return;
       }
 
@@ -99,12 +100,12 @@ class NotificationWebSocketService {
         severity: json['severity']?.toString() ?? 'info',
       );
 
-      print('[NotificationWS] Notificación: [${notification.type}] '
+      debugPrint('[NotificationWS] Notificación: [${notification.type}] '
           '${notification.title} - ${notification.message}');
 
       _notificationController.add(notification);
     } catch (e) {
-      print('[NotificationWS] Error parseando mensaje: $e');
+      debugPrint('[NotificationWS] Error parseando mensaje: $e');
     }
   }
 
@@ -119,7 +120,7 @@ class NotificationWebSocketService {
 
   void _scheduleReconnect() {
     if (_reconnectAttempts >= _maxReconnectAttempts) {
-      print('[NotificationWS] Máximo de reconexiones alcanzado');
+      debugPrint('[NotificationWS] Máximo de reconexiones alcanzado');
       return;
     }
 
@@ -127,7 +128,7 @@ class NotificationWebSocketService {
     final delaySec = (_reconnectAttempts < 3) ? 3 + _reconnectAttempts * 2 : 10;
     _reconnectAttempts++;
 
-    print('[NotificationWS] Reintentando en ${delaySec}s '
+    debugPrint('[NotificationWS] Reintentando en ${delaySec}s '
         '(intento $_reconnectAttempts/$_maxReconnectAttempts)');
     _reconnectTimer = Timer(Duration(seconds: delaySec), () => _doConnect());
   }

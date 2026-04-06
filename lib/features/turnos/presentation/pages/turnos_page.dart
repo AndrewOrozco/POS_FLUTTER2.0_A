@@ -46,7 +46,7 @@ class _TurnosPageState extends State<TurnosPage> {
         });
       }
     } catch (e) {
-      print('[TurnosPage] Error cargando turnos: $e');
+      debugPrint('[TurnosPage] Error cargando turnos: $e');
       if (mounted) setState(() => _cargando = false);
     }
   }
@@ -165,7 +165,7 @@ class _TurnosPageState extends State<TurnosPage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -190,7 +190,7 @@ class _TurnosPageState extends State<TurnosPage> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppTheme.terpeRed.withOpacity(0.1),
+              color: AppTheme.terpeRed.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(Icons.schedule_rounded, color: AppTheme.terpeRed, size: 24),
@@ -272,7 +272,7 @@ class _TurnoCard extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -461,7 +461,7 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
         _iniciarPollingRfid();
       }
     } catch (e) {
-      print('[TurnoWizard] Error verificando turnos: $e');
+      debugPrint('[TurnoWizard] Error verificando turnos: $e');
       if (mounted) {
         setState(() {
           _verificandoTurnos = false;
@@ -486,7 +486,7 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
         });
       }
     } catch (e) {
-      print('[TurnoWizard] Error cargando surtidores: $e');
+      debugPrint('[TurnoWizard] Error cargando surtidores: $e');
       if (mounted) setState(() => _cargandoSurtidores = false);
     }
   }
@@ -551,7 +551,7 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
       if (!mounted || !_rfidPolling) return;
 
       if (lectura != null) {
-        print('[TurnoWizard] RFID detectado: $lectura');
+        debugPrint('[TurnoWizard] RFID detectado: $lectura');
         // serial = RFID tag serial, promotor_id = personas.id en BD (resuelto por Core)
         final cedula = lectura['serial']?.toString() ?? '';
         final nombre = lectura['promotor_nombre']?.toString() ?? '';
@@ -562,11 +562,11 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
           final result = await _apiService.validarPromotor(cedula, personasId: promotorId);
           if (!mounted) return;
 
-          print('[TurnoWizard] validarPromotor result: ${result['exito']} mensaje: ${result['mensaje'] ?? 'OK'}');
+          debugPrint('[TurnoWizard] validarPromotor result: ${result['exito']} mensaje: ${result['mensaje'] ?? 'OK'}');
 
           if (result['exito'] == true) {
             final promotor = result['promotor'] as Map<String, dynamic>;
-            print('[TurnoWizard] Promotor encontrado: nombre=${promotor['nombre']} ident=${promotor['identificacion']} pin=${promotor['pin']}');
+            debugPrint('[TurnoWizard] Promotor encontrado: nombre=${promotor['nombre']} ident=${promotor['identificacion']} pin=${promotor['pin']}');
             setState(() {
               _usuarioController.text = promotor['identificacion']?.toString() ?? cedula;
               _passwordController.text = promotor['pin']?.toString() ?? '';
@@ -575,21 +575,21 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
               _rfidNombre = promotor['nombre']?.toString() ?? nombre;
               _loginError = null;
             });
-            print('[TurnoWizard] Controllers: usuario=${_usuarioController.text} pwd=${_passwordController.text}');
-            print('[TurnoWizard] Estado: pasoActual=$_pasoActual necesitaSurt=$_necesitaSurtidores puedeContinuar=$_puedeContinuarSurtidores');
+            debugPrint('[TurnoWizard] Controllers: usuario=${_usuarioController.text} pwd=${_passwordController.text}');
+            debugPrint('[TurnoWizard] Estado: pasoActual=$_pasoActual necesitaSurt=$_necesitaSurtidores puedeContinuar=$_puedeContinuarSurtidores');
 
             // Si estamos en paso surtidores, avanzar al login
             if (_pasoActual == 0 && _necesitaSurtidores && _puedeContinuarSurtidores) {
-              print('[TurnoWizard] -> Avanzando a login (surtidores listos)');
+              debugPrint('[TurnoWizard] -> Avanzando a login (surtidores listos)');
               setState(() => _pasoActual = 1);
             } else if (_pasoActual == 0 && !_necesitaSurtidores) {
-              print('[TurnoWizard] -> Avanzando a login (no necesita surtidores)');
+              debugPrint('[TurnoWizard] -> Avanzando a login (no necesita surtidores)');
               setState(() => _pasoActual = 1);
             }
 
             // Auto-submit si ya estamos en login
             if (_pasoActual == 1) {
-              print('[TurnoWizard] -> AUTO-INIT: llamando _iniciarTurno()');
+              debugPrint('[TurnoWizard] -> AUTO-INIT: llamando _iniciarTurno()');
               await Future.delayed(const Duration(milliseconds: 500));
               if (mounted) _iniciarTurno();
               return; // Turno iniciado, no seguir polling
@@ -598,14 +598,14 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
             // Si aún estamos en paso 0 (surtidores no listos),
             // los datos del promotor quedan pre-llenados.
             // Continuar polling por si pasa otra lectura RFID.
-            print('[TurnoWizard] RFID guardado pero pasoActual=$_pasoActual, esperando surtidores');
+            debugPrint('[TurnoWizard] RFID guardado pero pasoActual=$_pasoActual, esperando surtidores');
             if (_rfidPolling && mounted) {
               _hacerPollRfid();
             }
             return;
           } else {
             // Promotor no encontrado - mostrar error en UI
-            print('[TurnoWizard] Promotor no encontrado: ${result['mensaje']}');
+            debugPrint('[TurnoWizard] Promotor no encontrado: ${result['mensaje']}');
             setState(() {
               _rfidDetectado = false;
               _rfidNombre = null;
@@ -620,7 +620,7 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
         _hacerPollRfid();
       }
     } catch (e) {
-      print('[TurnoWizard] Error RFID poll: $e');
+      debugPrint('[TurnoWizard] Error RFID poll: $e');
       if (_rfidPolling && mounted) {
         Future.delayed(const Duration(seconds: 3), () => _hacerPollRfid());
       }
@@ -713,7 +713,7 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.green.withOpacity(0.3),
+                        color: Colors.green.withValues(alpha: 0.3),
                         blurRadius: 30,
                         offset: const Offset(0, 10),
                       ),
@@ -847,7 +847,7 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
+                        color: Colors.black.withValues(alpha: 0.2),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -874,7 +874,7 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
       child: Row(
         children: [
           Material(
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(12),
             child: InkWell(
               onTap: () {
@@ -898,7 +898,7 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: _rfidDetectado ? Colors.green.shade400 : Colors.white.withOpacity(0.2),
+              color: _rfidDetectado ? Colors.green.shade400 : Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
@@ -1445,8 +1445,8 @@ class _SurtidorCardState extends State<_SurtidorCard>
             boxShadow: [
               BoxShadow(
                 color: widget.seleccionado
-                    ? borderColor.withOpacity(0.15)
-                    : Colors.black.withOpacity(0.04),
+                    ? borderColor.withValues(alpha: 0.15)
+                    : Colors.black.withValues(alpha: 0.04),
                 blurRadius: widget.seleccionado ? 8 : 4,
                 offset: const Offset(0, 2),
               ),
@@ -1625,7 +1625,7 @@ class _CerrarTurnoWizardState extends State<_CerrarTurnoWizard> {
         });
       }
     } catch (e) {
-      print('[CerrarTurno] Error cargando turnos: $e');
+      debugPrint('[CerrarTurno] Error cargando turnos: $e');
       if (mounted) setState(() => _cargando = false);
     }
   }
@@ -1661,7 +1661,7 @@ class _CerrarTurnoWizardState extends State<_CerrarTurnoWizard> {
             todosTotalizadores.addAll(data);
           }
         } catch (e) {
-          print('[CerrarTurno] Error totalizadores surtidor $surtidorId: $e');
+          debugPrint('[CerrarTurno] Error totalizadores surtidor $surtidorId: $e');
         }
       }
 
@@ -1673,7 +1673,7 @@ class _CerrarTurnoWizardState extends State<_CerrarTurnoWizard> {
         });
       }
     } catch (e) {
-      print('[CerrarTurno] Error leyendo totalizadores: $e');
+      debugPrint('[CerrarTurno] Error leyendo totalizadores: $e');
       if (mounted) {
         setState(() {
           _leyendoTotalizadores = false;
@@ -1866,7 +1866,7 @@ class _CerrarTurnoWizardState extends State<_CerrarTurnoWizard> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1880,7 +1880,7 @@ class _CerrarTurnoWizardState extends State<_CerrarTurnoWizard> {
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppTheme.terpeRed.withOpacity(0.1),
+                color: AppTheme.terpeRed.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(Icons.arrow_back_rounded, color: AppTheme.terpeRed, size: 22),

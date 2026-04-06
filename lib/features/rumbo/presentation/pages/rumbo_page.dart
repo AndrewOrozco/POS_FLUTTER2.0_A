@@ -216,7 +216,7 @@ class _RumboPageState extends State<RumboPage> {
       if (promotor.identificacion != null) {
         identificadorPromotor = int.tryParse(promotor.identificacion!);
       }
-      print('[RUMBO] Promotor activo: id=$idPromotor ident=$identificadorPromotor');
+      debugPrint('[RUMBO] Promotor activo: id=$idPromotor ident=$identificadorPromotor');
     }
 
     final response = await _apiService.autorizarRumbo(
@@ -248,7 +248,7 @@ class _RumboPageState extends State<RumboPage> {
         // UREA/AdBlue: No tiene countdown ni espera de surtidor
         // El operador acepta y la venta va a "Ventas sin resolver"
         // Java: loadSalePanelAdBlue() muestra litros y mensaje
-        print('[RUMBO-UREA] Autorizado - litros: ${response.litrosAutorizados}');
+        debugPrint('[RUMBO-UREA] Autorizado - litros: ${response.litrosAutorizados}');
       } else {
         // Combustible normal: countdown + escucha WebSocket
         final timeoutSec = response.timeoutAutorizacion ?? 30;
@@ -298,7 +298,7 @@ class _RumboPageState extends State<RumboPage> {
           data['estado_publico'] ??
           data['estado'] ?? 0;
 
-      print('[RUMBO-WS] Cara $cara → estado $codigoEstado');
+      debugPrint('[RUMBO-WS] Cara $cara → estado $codigoEstado');
 
       // 103 = DESPACHANDO (fueling)
       if (codigoEstado == 103 || codigoEstado == 104) {

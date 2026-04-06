@@ -91,13 +91,13 @@ class ConfiguracionPage extends StatelessWidget {
                             width: 140,
                             height: 140,
                             decoration: BoxDecoration(
-                              color: AppTheme.terpeRed.withOpacity(0.08),
+                              color: AppTheme.terpeRed.withValues(alpha: 0.08),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
                               Icons.settings_rounded,
                               size: 72,
-                              color: AppTheme.terpeRed.withOpacity(0.7),
+                              color: AppTheme.terpeRed.withValues(alpha: 0.7),
                             ),
                           ),
                           const SizedBox(height: 20),
@@ -137,7 +137,7 @@ class ConfiguracionPage extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -157,7 +157,7 @@ class ConfiguracionPage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppTheme.terpeRed.withOpacity(0.1),
+              color: AppTheme.terpeRed.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(Icons.settings_rounded, color: AppTheme.terpeRed, size: 22),
@@ -198,7 +198,7 @@ class ConfiguracionPage extends StatelessWidget {
             border: Border.all(color: Colors.grey.shade200),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: Colors.black.withValues(alpha: 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
@@ -211,7 +211,7 @@ class ConfiguracionPage extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: AppTheme.terpeRed.withOpacity(0.1),
+                  color: AppTheme.terpeRed.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(

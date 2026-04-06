@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/services/api_consultas_service.dart';
-import '../../../../core/models/api_models.dart';
+// import '../../../../core/models/api_models.dart';
 
 class GopassEstadoPagoPage extends StatefulWidget {
   const GopassEstadoPagoPage({super.key});
@@ -239,7 +239,7 @@ class _GopassEstadoPagoPageState extends State<GopassEstadoPagoPage>
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
+                      color: Colors.white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.credit_card, color: Colors.white, size: 24),
@@ -309,7 +309,7 @@ class _GopassEstadoPagoPageState extends State<GopassEstadoPagoPage>
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
+              color: Colors.black.withValues(alpha: 0.15),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -328,7 +328,7 @@ class _GopassEstadoPagoPageState extends State<GopassEstadoPagoPage>
             const SizedBox(height: 2),
             Text(
               label,
-              style: TextStyle(color: textColor.withOpacity(0.85), fontSize: 11, fontWeight: FontWeight.w600),
+              style: TextStyle(color: textColor.withValues(alpha: 0.85), fontSize: 11, fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
             ),
           ],
@@ -484,7 +484,7 @@ class _GopassEstadoPagoPageState extends State<GopassEstadoPagoPage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: accentColor.withOpacity(0.08),
+            color: accentColor.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -538,7 +538,7 @@ class _GopassEstadoPagoPageState extends State<GopassEstadoPagoPage>
                       decoration: BoxDecoration(
                         color: estadoBg,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: accentColor.withOpacity(0.3)),
+                        border: Border.all(color: accentColor.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -646,7 +646,7 @@ class _GopassEstadoPagoPageState extends State<GopassEstadoPagoPage>
     VoidCallback? onTap,
   }) {
     return Material(
-      color: color.withOpacity(0.08),
+      color: color.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),

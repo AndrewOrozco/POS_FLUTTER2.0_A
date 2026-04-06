@@ -15,6 +15,7 @@ import 'package:http/http.dart' as http;
 export '../models/api_models.dart';
 
 import '../models/api_models.dart';
+import 'package:flutter/foundation.dart';
 
 /// Servicio para el API de consultas (FastAPI)
 class ApiConsultasService {
@@ -39,7 +40,7 @@ class ApiConsultasService {
       if (jornadaId != null) url += '&jornada_id=$jornadaId';
       
       final uri = Uri.parse(url);
-      print('[ApiConsultas] GET $uri');
+      debugPrint('[ApiConsultas] GET $uri');
       
       final response = await http.get(uri).timeout(const Duration(seconds: 10));
       
@@ -47,7 +48,7 @@ class ApiConsultasService {
         final data = json.decode(response.body);
         final ventasJson = data['ventas'] as List<dynamic>;
         
-        print('[ApiConsultas] Ventas sin resolver: ${data['total']} (página ${data['pagina']}/${data['total_paginas']})');
+        debugPrint('[ApiConsultas] Ventas sin resolver: ${data['total']} (página ${data['pagina']}/${data['total_paginas']})');
         
         return VentasResponse<VentaSinResolver>(
           total: parseInt(data['total']),
@@ -58,11 +59,11 @@ class ApiConsultasService {
           ventas: ventasJson.map((v) => VentaSinResolver.fromJson(v)).toList(),
         );
       } else {
-        print('[ApiConsultas] Error ${response.statusCode}: ${response.body}');
+        debugPrint('[ApiConsultas] Error ${response.statusCode}: ${response.body}');
         return VentasResponse(total: 0, pagina: 1, porPagina: limite, totalPaginas: 1, ventas: []);
       }
     } catch (e) {
-      print('[ApiConsultas] Error en getVentasSinResolver: $e');
+      debugPrint('[ApiConsultas] Error en getVentasSinResolver: $e');
       return VentasResponse(total: 0, pagina: 1, porPagina: limite, totalPaginas: 1, ventas: []);
     }
   }
@@ -79,7 +80,7 @@ class ApiConsultasService {
       if (jornadaId != null) url += '&jornada_id=$jornadaId';
       
       final uri = Uri.parse(url);
-      print('[ApiConsultas] GET $uri');
+      debugPrint('[ApiConsultas] GET $uri');
       
       final response = await http.get(uri).timeout(const Duration(seconds: 10));
       
@@ -87,7 +88,7 @@ class ApiConsultasService {
         final data = json.decode(response.body);
         final ventasJson = data['ventas'] as List<dynamic>;
         
-        print('[ApiConsultas] Historial ventas: ${data['total']} (página ${data['pagina']}/${data['total_paginas']})');
+        debugPrint('[ApiConsultas] Historial ventas: ${data['total']} (página ${data['pagina']}/${data['total_paginas']})');
         
         return VentasResponse<VentaHistorial>(
           total: parseInt(data['total']),
@@ -98,11 +99,11 @@ class ApiConsultasService {
           ventas: ventasJson.map((v) => VentaHistorial.fromJson(v)).toList(),
         );
       } else {
-        print('[ApiConsultas] Error ${response.statusCode}: ${response.body}');
+        debugPrint('[ApiConsultas] Error ${response.statusCode}: ${response.body}');
         return VentasResponse(total: 0, pagina: 1, porPagina: limite, totalPaginas: 1, ventas: []);
       }
     } catch (e) {
-      print('[ApiConsultas] Error en getHistorialVentas: $e');
+      debugPrint('[ApiConsultas] Error en getHistorialVentas: $e');
       return VentasResponse(total: 0, pagina: 1, porPagina: limite, totalPaginas: 1, ventas: []);
     }
   }
@@ -133,7 +134,7 @@ class ApiConsultasService {
       }
       return _tiposPredeterminados();
     } catch (e) {
-      print('[ApiConsultas] Error getTiposIdentificacion: $e');
+      debugPrint('[ApiConsultas] Error getTiposIdentificacion: $e');
       return _tiposPredeterminados();
     }
   }
@@ -151,19 +152,19 @@ class ApiConsultasService {
   Future<ClienteConsulta> consultarCliente(String identificacion, {int tipoDocumento = 13}) async {
     try {
       final url = '$_baseUrl/ventas/consultar-cliente?identificacion=$identificacion&tipo_documento=$tipoDocumento';
-      print('[ApiConsultas] GET $url');
+      debugPrint('[ApiConsultas] GET $url');
       
       final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
       
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        print('[ApiConsultas] Respuesta cliente: $data');
+        debugPrint('[ApiConsultas] Respuesta cliente: $data');
         return ClienteConsulta.fromJson(data);
       }
-      print('[ApiConsultas] Error HTTP ${response.statusCode}');
+      debugPrint('[ApiConsultas] Error HTTP ${response.statusCode}');
       return ClienteConsulta.consumidorFinal(identificacion);
     } catch (e) {
-      print('[ApiConsultas] Error consultarCliente: $e');
+      debugPrint('[ApiConsultas] Error consultarCliente: $e');
       return ClienteConsulta.consumidorFinal(identificacion);
     }
   }
@@ -199,7 +200,7 @@ class ApiConsultasService {
         'facturacion_electronica': facturacionElectronica,
       };
       
-      print('[ApiConsultas] POST guardar-datos-factura-ventas-curso: cara=$cara, '
+      debugPrint('[ApiConsultas] POST guardar-datos-factura-ventas-curso: cara=$cara, '
           'cliente=$nombreCliente, FE=$facturacionElectronica');
       
       final response = await http.post(
@@ -208,7 +209,7 @@ class ApiConsultasService {
         body: json.encode(body),
       ).timeout(const Duration(seconds: 15));
       
-      print('[ApiConsultas] Response ${response.statusCode}: ${response.body}');
+      debugPrint('[ApiConsultas] Response ${response.statusCode}: ${response.body}');
       final data = json.decode(response.body);
       
       return ActualizarDatosVentaResponse(
@@ -217,7 +218,7 @@ class ApiConsultasService {
         movimientoId: null,
       );
     } catch (e) {
-      print('[ApiConsultas] Error guardarDatosFacturaVentasCurso: $e');
+      debugPrint('[ApiConsultas] Error guardarDatosFacturaVentasCurso: $e');
       return ActualizarDatosVentaResponse(
         success: false,
         message: 'Error de conexión: $e',
@@ -238,12 +239,12 @@ class ApiConsultasService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final mediosJson = data['medios'] as List<dynamic>;
-        print('[ApiConsultas] Medios de venta $movimientoId: ${mediosJson.length}');
+        debugPrint('[ApiConsultas] Medios de venta $movimientoId: ${mediosJson.length}');
         return mediosJson.map((m) => MedioPagoVentaConsulta.fromJson(m)).toList();
       }
       return [];
     } catch (e) {
-      print('[ApiConsultas] Error getMediosPagoVenta: $e');
+      debugPrint('[ApiConsultas] Error getMediosPagoVenta: $e');
       return [];
     }
   }
@@ -271,7 +272,7 @@ class ApiConsultasService {
         if (esCredito != null) 'es_credito': esCredito,
       };
       
-      print('[ApiConsultas] POST actualizar-datos-venta: $body');
+      debugPrint('[ApiConsultas] POST actualizar-datos-venta: $body');
       
       final response = await http.post(
         Uri.parse('$_baseUrl/ventas/actualizar-datos-venta'),
@@ -279,12 +280,12 @@ class ApiConsultasService {
         body: json.encode(body),
       ).timeout(const Duration(seconds: 15));
       
-      print('[ApiConsultas] Response ${response.statusCode}: ${response.body}');
+      debugPrint('[ApiConsultas] Response ${response.statusCode}: ${response.body}');
       final data = json.decode(response.body);
       
       return ActualizarDatosVentaResponse(success: data['success'] == true, message: data['message'] ?? '', movimientoId: data['movimiento_id']);
     } catch (e) {
-      print('[ApiConsultas] Error actualizarDatosVenta: $e');
+      debugPrint('[ApiConsultas] Error actualizarDatosVenta: $e');
       return ActualizarDatosVentaResponse(success: false, message: 'Error de conexión: $e', movimientoId: movimientoId);
     }
   }
@@ -302,7 +303,7 @@ class ApiConsultasService {
         if (identificadorEquipo != null) 'identificador_equipo': identificadorEquipo,
       };
       
-      print('[ApiConsultas] POST actualizar-medios-pago: $body');
+      debugPrint('[ApiConsultas] POST actualizar-medios-pago: $body');
       
       final response = await http.post(
         Uri.parse('$_baseUrl/ventas/actualizar-medios-pago'),
@@ -310,12 +311,12 @@ class ApiConsultasService {
         body: json.encode(body),
       ).timeout(const Duration(seconds: 15));
       
-      print('[ApiConsultas] Response ${response.statusCode}: ${response.body}');
+      debugPrint('[ApiConsultas] Response ${response.statusCode}: ${response.body}');
       final data = json.decode(response.body);
       
       return ActualizarMediosPagoResponse(success: data['success'] == true, message: data['message'] ?? '', movimientoId: data['movimiento_id']);
     } catch (e) {
-      print('[ApiConsultas] Error actualizarMediosPago: $e');
+      debugPrint('[ApiConsultas] Error actualizarMediosPago: $e');
       return ActualizarMediosPagoResponse(success: false, message: 'Error de conexión: $e', movimientoId: movimientoId);
     }
   }
@@ -335,7 +336,7 @@ class ApiConsultasService {
         'imprimir_despues': imprimirDespues,
       };
       
-      print('[ApiConsultas] POST ventas/sin-resolver/resolver-y-enviar-fe: mov=$movimientoId, imprimir=$imprimirDespues');
+      debugPrint('[ApiConsultas] POST ventas/sin-resolver/resolver-y-enviar-fe: mov=$movimientoId, imprimir=$imprimirDespues');
       
       final response = await http.post(
         Uri.parse('$_baseUrl/ventas/sin-resolver/resolver-y-enviar-fe'),
@@ -343,14 +344,14 @@ class ApiConsultasService {
         body: json.encode(body),
       ).timeout(const Duration(seconds: 35));
       
-      print('[ApiConsultas] FE Response ${response.statusCode}: ${response.body}');
+      debugPrint('[ApiConsultas] FE Response ${response.statusCode}: ${response.body}');
       
       if (response.statusCode == 200) {
         return json.decode(response.body);
       }
       return {'ok': false, 'error_7011': 'HTTP ${response.statusCode}'};
     } catch (e) {
-      print('[ApiConsultas] Error enviarFEVentaSinResolver: $e');
+      debugPrint('[ApiConsultas] Error enviarFEVentaSinResolver: $e');
       return {'ok': false, 'error_7011': 'Error: $e'};
     }
   }
@@ -368,7 +369,7 @@ class ApiConsultasService {
       }
       return [MedioPagoConsulta(id: 1, codigo: '01', nombre: 'EFECTIVO', codigoDian: 10, requiereVoucher: false)];
     } catch (e) {
-      print('[ApiConsultas] Error getMediosPago: $e');
+      debugPrint('[ApiConsultas] Error getMediosPago: $e');
       return [MedioPagoConsulta(id: 1, codigo: '01', nombre: 'EFECTIVO', codigoDian: 10, requiereVoucher: false)];
     }
   }
@@ -394,7 +395,7 @@ class ApiConsultasService {
         'valor_total': valorTotal,
       };
       
-      print('[ApiConsultas] POST appterpel/asignar: $body');
+      debugPrint('[ApiConsultas] POST appterpel/asignar: $body');
       
       final response = await http.post(
         Uri.parse('$_baseUrl/ventas/appterpel/asignar'),
@@ -402,7 +403,7 @@ class ApiConsultasService {
         body: json.encode(body),
       ).timeout(const Duration(seconds: 15));
       
-      print('[ApiConsultas] AppTerpel Asignar Response ${response.statusCode}: ${response.body}');
+      debugPrint('[ApiConsultas] AppTerpel Asignar Response ${response.statusCode}: ${response.body}');
       final data = json.decode(response.body);
       
       return AppTerpelPagoResponse(
@@ -411,7 +412,7 @@ class ApiConsultasService {
         movimientoId: data['movimiento_id'] != null ? parseInt(data['movimiento_id']) : movimientoId,
       );
     } catch (e) {
-      print('[ApiConsultas] Error asignarAppTerpelVenta: $e');
+      debugPrint('[ApiConsultas] Error asignarAppTerpelVenta: $e');
       return AppTerpelPagoResponse(
         success: false,
         message: 'Error de conexión: $e',
@@ -427,7 +428,7 @@ class ApiConsultasService {
       final data = json.decode(response.body);
       return AppTerpelEstado(pagoEnProceso: data['pago_en_proceso'] == true, puedeGestionar: data['puede_gestionar'] == true);
     } catch (e) {
-      print('[ApiConsultas] Error getAppTerpelEstado: $e');
+      debugPrint('[ApiConsultas] Error getAppTerpelEstado: $e');
       return AppTerpelEstado(pagoEnProceso: false, puedeGestionar: true);
     }
   }
@@ -444,7 +445,7 @@ class ApiConsultasService {
         'medio_descripcion': medioDescripcion,
       };
       
-      print('[ApiConsultas] POST appterpel/enviar-pago: $body');
+      debugPrint('[ApiConsultas] POST appterpel/enviar-pago: $body');
       
       final response = await http.post(
         Uri.parse('$_baseUrl/ventas/appterpel/enviar-pago'),
@@ -452,12 +453,12 @@ class ApiConsultasService {
         body: json.encode(body),
       ).timeout(const Duration(seconds: 35));
       
-      print('[ApiConsultas] AppTerpel Response ${response.statusCode}: ${response.body}');
+      debugPrint('[ApiConsultas] AppTerpel Response ${response.statusCode}: ${response.body}');
       final data = json.decode(response.body);
       
       return AppTerpelPagoResponse.fromJson(data);
     } catch (e) {
-      print('[ApiConsultas] Error enviarPagoAppTerpel: $e');
+      debugPrint('[ApiConsultas] Error enviarPagoAppTerpel: $e');
       return AppTerpelPagoResponse(
         success: false,
         message: 'Error de conexión con el orquestador: $e',
@@ -476,7 +477,7 @@ class ApiConsultasService {
       final data = json.decode(response.body);
       return data['tiempo_segundos'] ?? 30;
     } catch (e) {
-      print('[ApiConsultas] Error getTiempoMensajeAppTerpel: $e');
+      debugPrint('[ApiConsultas] Error getTiempoMensajeAppTerpel: $e');
       return 30; // Default como en Java
     }
   }
@@ -506,7 +507,7 @@ class ApiConsultasService {
         'es_app_terpel': esAppTerpel,
       };
       
-      print('[ApiConsultas] POST guardar-medio-ventas-curso: $body');
+      debugPrint('[ApiConsultas] POST guardar-medio-ventas-curso: $body');
       
       final response = await http.post(
         Uri.parse('$_baseUrl/ventas/guardar-medio-ventas-curso'),
@@ -514,12 +515,12 @@ class ApiConsultasService {
         body: json.encode(body),
       ).timeout(const Duration(seconds: 15));
       
-      print('[ApiConsultas] Response ${response.statusCode}: ${response.body}');
+      debugPrint('[ApiConsultas] Response ${response.statusCode}: ${response.body}');
       final data = json.decode(response.body);
       
       return GuardarMedioVentaCursoResponse(success: data['success'] == true, message: data['message'] ?? '');
     } catch (e) {
-      print('[ApiConsultas] Error guardarMedioVentaCurso: $e');
+      debugPrint('[ApiConsultas] Error guardarMedioVentaCurso: $e');
       return GuardarMedioVentaCursoResponse(success: false, message: 'Error de conexión: $e');
     }
   }
@@ -536,10 +537,10 @@ class ApiConsultasService {
       ).timeout(const Duration(seconds: 10));
       
       final data = json.decode(response.body);
-      print('[ApiConsultas] limpiarAppTerpel cara $cara: ${data['message']}');
+      debugPrint('[ApiConsultas] limpiarAppTerpel cara $cara: ${data['message']}');
       return data['success'] == true;
     } catch (e) {
-      print('[ApiConsultas] Error limpiarAppTerpelVentasCurso: $e');
+      debugPrint('[ApiConsultas] Error limpiarAppTerpelVentasCurso: $e');
       return false;
     }
   }
@@ -555,7 +556,7 @@ class ApiConsultasService {
       }
       return VentaActivaCara(found: false, cara: cara);
     } catch (e) {
-      print('[ApiConsultas] Error getVentaActivaPorCara: $e');
+      debugPrint('[ApiConsultas] Error getVentaActivaPorCara: $e');
       return VentaActivaCara(found: false, cara: cara);
     }
   }
@@ -573,7 +574,7 @@ class ApiConsultasService {
         if (surtidor != null) 'surtidor': surtidor,
       };
       
-      print('[ApiConsultas] POST gopass/consultar-placas: $body');
+      debugPrint('[ApiConsultas] POST gopass/consultar-placas: $body');
       
       final response = await http.post(
         Uri.parse('$_baseUrl/ventas/gopass/consultar-placas'),
@@ -581,7 +582,7 @@ class ApiConsultasService {
         body: json.encode(body),
       ).timeout(const Duration(seconds: 35));
       
-      print('[ApiConsultas] GOPASS Response ${response.statusCode}: ${response.body}');
+      debugPrint('[ApiConsultas] GOPASS Response ${response.statusCode}: ${response.body}');
       
       final data = json.decode(response.body);
       final placasJson = data['placas'] as List<dynamic>? ?? [];
@@ -592,7 +593,7 @@ class ApiConsultasService {
         placas: placasJson.map((p) => PlacaGopass.fromJson(p)).toList(),
       );
     } catch (e) {
-      print('[ApiConsultas] Error consultarPlacasGoPass: $e');
+      debugPrint('[ApiConsultas] Error consultarPlacasGoPass: $e');
       return PlacasGopassResponse(success: false, message: 'Error de conexión: $e', placas: []);
     }
   }
@@ -612,10 +613,10 @@ class ApiConsultasService {
         final data = json.decode(response.body) as List<dynamic>;
         return data.map((m) => MangueraRumbo.fromJson(m)).toList();
       }
-      print('[ApiConsultas] Error getManguerasRumbo: ${response.statusCode}');
+      debugPrint('[ApiConsultas] Error getManguerasRumbo: ${response.statusCode}');
       return [];
     } catch (e) {
-      print('[ApiConsultas] Error getManguerasRumbo: $e');
+      debugPrint('[ApiConsultas] Error getManguerasRumbo: $e');
       return [];
     }
   }
@@ -634,7 +635,7 @@ class ApiConsultasService {
       }
       return [];
     } catch (e) {
-      print('[ApiConsultas] Error getMediosIdentificacionRumbo: $e');
+      debugPrint('[ApiConsultas] Error getMediosIdentificacionRumbo: $e');
       return [];
     }
   }
@@ -674,7 +675,7 @@ class ApiConsultasService {
         if (codigoProducto != null) 'codigo_producto': codigoProducto,
       };
 
-      print('[ApiConsultas] POST rumbo/autorizar: $body');
+      debugPrint('[ApiConsultas] POST rumbo/autorizar: $body');
 
       final response = await http.post(
         Uri.parse('$_baseUrl/rumbo/autorizar'),
@@ -682,7 +683,7 @@ class ApiConsultasService {
         body: json.encode(body),
       ).timeout(const Duration(seconds: 35));
 
-      print('[ApiConsultas] RUMBO autorizar response: ${response.statusCode}');
+      debugPrint('[ApiConsultas] RUMBO autorizar response: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -693,7 +694,7 @@ class ApiConsultasService {
         mensaje: 'Error HTTP ${response.statusCode}',
       );
     } catch (e) {
-      print('[ApiConsultas] Error autorizarRumbo: $e');
+      debugPrint('[ApiConsultas] Error autorizarRumbo: $e');
       return AutorizarRumboResponse(
         autorizado: false,
         mensaje: 'Error de conexión: $e',
@@ -728,7 +729,7 @@ class ApiConsultasService {
       }
       return false;
     } catch (e) {
-      print('[ApiConsultas] Error enviarDatosAdicionalesRumbo: $e');
+      debugPrint('[ApiConsultas] Error enviarDatosAdicionalesRumbo: $e');
       return false;
     }
   }
@@ -755,7 +756,7 @@ class ApiConsultasService {
       }
       return null;
     } catch (e) {
-      print('[ApiConsultas] Error getLecturaIdentificadorRumbo: $e');
+      debugPrint('[ApiConsultas] Error getLecturaIdentificadorRumbo: $e');
       return null;
     }
   }
@@ -767,7 +768,7 @@ class ApiConsultasService {
         Uri.parse('$_baseUrl/rumbo/lectura-identificador/$cara?tipo=$tipo'),
       ).timeout(const Duration(seconds: 5));
     } catch (e) {
-      print('[ApiConsultas] Error limpiarLecturaIdentificadorRumbo: $e');
+      debugPrint('[ApiConsultas] Error limpiarLecturaIdentificadorRumbo: $e');
     }
   }
 
@@ -814,7 +815,7 @@ class ApiConsultasService {
       }
       return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
     } catch (e) {
-      print('[ApiConsultas] Error confirmarVentaUrea: $e');
+      debugPrint('[ApiConsultas] Error confirmarVentaUrea: $e');
       return {'exito': false, 'mensaje': 'Error: $e'};
     }
   }
@@ -830,7 +831,7 @@ class ApiConsultasService {
       }
       return {};
     } catch (e) {
-      print('[ApiConsultas] Error getDetallesUreaVenta: $e');
+      debugPrint('[ApiConsultas] Error getDetallesUreaVenta: $e');
       return {};
     }
   }
@@ -856,7 +857,7 @@ class ApiConsultasService {
       }
       return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
     } catch (e) {
-      print('[ApiConsultas] Error finalizarUreaSinResolver: $e');
+      debugPrint('[ApiConsultas] Error finalizarUreaSinResolver: $e');
       return {'exito': false, 'mensaje': 'Error: $e'};
     }
   }
@@ -875,13 +876,13 @@ class ApiConsultasService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final surtidores = data['surtidores'] as List<dynamic>;
-        print('[ApiConsultas] Surtidores estación: ${surtidores.length}');
+        debugPrint('[ApiConsultas] Surtidores estación: ${surtidores.length}');
         return surtidores.cast<Map<String, dynamic>>();
       }
-      print('[ApiConsultas] Error getSurtidoresEstacion: ${response.statusCode}');
+      debugPrint('[ApiConsultas] Error getSurtidoresEstacion: ${response.statusCode}');
       return [];
     } catch (e) {
-      print('[ApiConsultas] Error getSurtidoresEstacion: $e');
+      debugPrint('[ApiConsultas] Error getSurtidoresEstacion: $e');
       return [];
     }
   }
@@ -903,7 +904,7 @@ class ApiConsultasService {
       }
       return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}', 'data': []};
     } catch (e) {
-      print('[ApiConsultas] Error getTotalizadores: $e');
+      debugPrint('[ApiConsultas] Error getTotalizadores: $e');
       return {'exito': false, 'mensaje': 'Error: $e', 'data': []};
     }
   }
@@ -926,7 +927,7 @@ class ApiConsultasService {
       }
       return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
     } catch (e) {
-      print('[ApiConsultas] Error validarPromotor: $e');
+      debugPrint('[ApiConsultas] Error validarPromotor: $e');
       return {'exito': false, 'mensaje': 'Error: $e'};
     }
   }
@@ -948,7 +949,7 @@ class ApiConsultasService {
         'es_principal': esPrincipal,
       };
 
-      print('[ApiConsultas] POST turnos/iniciar: persona=$personasId saldo=$saldo');
+      debugPrint('[ApiConsultas] POST turnos/iniciar: persona=$personasId saldo=$saldo');
 
       final response = await http.post(
         Uri.parse('$_baseUrl/turnos/iniciar'),
@@ -956,14 +957,14 @@ class ApiConsultasService {
         body: json.encode(body),
       ).timeout(const Duration(seconds: 60));
 
-      print('[ApiConsultas] Turno iniciar response: ${response.statusCode}');
+      debugPrint('[ApiConsultas] Turno iniciar response: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         return json.decode(response.body) as Map<String, dynamic>;
       }
       return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
     } catch (e) {
-      print('[ApiConsultas] Error iniciarTurno: $e');
+      debugPrint('[ApiConsultas] Error iniciarTurno: $e');
       return {'exito': false, 'mensaje': 'Error: $e'};
     }
   }
@@ -992,7 +993,7 @@ class ApiConsultasService {
       }
       return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
     } catch (e) {
-      print('[ApiConsultas] Error finalizarTurno: $e');
+      debugPrint('[ApiConsultas] Error finalizarTurno: $e');
       return {'exito': false, 'mensaje': 'Error: $e'};
     }
   }
@@ -1011,7 +1012,7 @@ class ApiConsultasService {
       }
       return [];
     } catch (e) {
-      print('[ApiConsultas] Error getTurnosActivosApi: $e');
+      debugPrint('[ApiConsultas] Error getTurnosActivosApi: $e');
       return [];
     }
   }
@@ -1040,7 +1041,7 @@ class ApiConsultasService {
       }
       return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
     } catch (e) {
-      print('[ApiConsultas] Error validarClienteFidelizacion: $e');
+      debugPrint('[ApiConsultas] Error validarClienteFidelizacion: $e');
       return {'exito': false, 'mensaje': 'Error: $e'};
     }
   }
@@ -1067,7 +1068,7 @@ class ApiConsultasService {
       }
       return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
     } catch (e) {
-      print('[ApiConsultas] Error acumularPuntosFidelizacion: $e');
+      debugPrint('[ApiConsultas] Error acumularPuntosFidelizacion: $e');
       return {'exito': false, 'mensaje': 'Error: $e'};
     }
   }
@@ -1110,7 +1111,7 @@ class ApiConsultasService {
       }
       return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
     } catch (e) {
-      print('[ApiConsultas] Error imprimirVenta: $e');
+      debugPrint('[ApiConsultas] Error imprimirVenta: $e');
       return {'exito': false, 'mensaje': 'Error: $e'};
     }
   }
@@ -1134,7 +1135,7 @@ class ApiConsultasService {
       }
       return [];
     } catch (e) {
-      print('[ApiConsultas] Error obtenerTransaccionesGopass: $e');
+      debugPrint('[ApiConsultas] Error obtenerTransaccionesGopass: $e');
       return [];
     }
   }
@@ -1160,7 +1161,7 @@ class ApiConsultasService {
       }
       return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
     } catch (e) {
-      print('[ApiConsultas] Error imprimirGopass: $e');
+      debugPrint('[ApiConsultas] Error imprimirGopass: $e');
       return {'exito': false, 'mensaje': 'Error: $e'};
     }
   }
@@ -1179,7 +1180,7 @@ class ApiConsultasService {
       }
       return [];
     } catch (e) {
-      print('[ApiConsultas] Error obtenerVentasGopass: $e');
+      debugPrint('[ApiConsultas] Error obtenerVentasGopass: $e');
       return [];
     }
   }
@@ -1200,7 +1201,7 @@ class ApiConsultasService {
       }
       return [];
     } catch (e) {
-      print('[ApiConsultas] Error consultarPlacasGopass: $e');
+      debugPrint('[ApiConsultas] Error consultarPlacasGopass: $e');
       return [];
     }
   }
@@ -1229,7 +1230,7 @@ class ApiConsultasService {
       }
       return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
     } catch (e) {
-      print('[ApiConsultas] Error procesarPagoGopass: $e');
+      debugPrint('[ApiConsultas] Error procesarPagoGopass: $e');
       return {'exito': false, 'mensaje': 'Error: $e'};
     }
   }
@@ -1255,7 +1256,7 @@ class ApiConsultasService {
       }
       return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
     } catch (e) {
-      print('[ApiConsultas] Error consultarEstadoGopass: $e');
+      debugPrint('[ApiConsultas] Error consultarEstadoGopass: $e');
       return {'exito': false, 'mensaje': 'Error: $e'};
     }
   }
@@ -1290,7 +1291,7 @@ class ApiConsultasService {
       }
       return {'total': 0, 'productos': []};
     } catch (e) {
-      print('[ApiConsultas] Error obtenerProductosCanastilla: $e');
+      debugPrint('[ApiConsultas] Error obtenerProductosCanastilla: $e');
       return {'total': 0, 'productos': []};
     }
   }
@@ -1312,7 +1313,7 @@ class ApiConsultasService {
       }
       return [];
     } catch (e) {
-      print('[ApiConsultas] Error obtenerCategoriasCanastilla: $e');
+      debugPrint('[ApiConsultas] Error obtenerCategoriasCanastilla: $e');
       return [];
     }
   }
@@ -1334,7 +1335,7 @@ class ApiConsultasService {
       }
       return [];
     } catch (e) {
-      print('[ApiConsultas] Error obtenerMediosPagoCanastilla: $e');
+      debugPrint('[ApiConsultas] Error obtenerMediosPagoCanastilla: $e');
       return [];
     }
   }
@@ -1353,7 +1354,7 @@ class ApiConsultasService {
 
       return json.decode(response.body) as Map<String, dynamic>;
     } catch (e) {
-      print('[ApiConsultas] Error procesarVentaCanastilla: $e');
+      debugPrint('[ApiConsultas] Error procesarVentaCanastilla: $e');
       return {'exito': false, 'mensaje': 'Error: $e'};
     }
   }
@@ -1382,7 +1383,7 @@ class ApiConsultasService {
       }
       return {'total': 0, 'ventas': []};
     } catch (e) {
-      print('[ApiConsultas] Error obtenerHistorialCanastilla: $e');
+      debugPrint('[ApiConsultas] Error obtenerHistorialCanastilla: $e');
       return {'total': 0, 'ventas': []};
     }
   }
@@ -1407,7 +1408,7 @@ class ApiConsultasService {
 
       return json.decode(response.body) as Map<String, dynamic>;
     } catch (e) {
-      print('[ApiConsultas] Error imprimirCanastilla: $e');
+      debugPrint('[ApiConsultas] Error imprimirCanastilla: $e');
       return {'exito': false, 'mensaje': 'Error: $e'};
     }
   }
@@ -1429,7 +1430,7 @@ class ApiConsultasService {
       }
       return {'facturacion_pos': false, 'is_default_fe': false};
     } catch (e) {
-      print('[ApiConsultas] Error obtenerConfigFacturacion: $e');
+      debugPrint('[ApiConsultas] Error obtenerConfigFacturacion: $e');
       return {'facturacion_pos': false, 'is_default_fe': false};
     }
   }
@@ -1464,7 +1465,7 @@ class ApiConsultasService {
       }
       return {'total': 0, 'productos': []};
     } catch (e) {
-      print('[ApiConsultas] Error obtenerProductosMarket: $e');
+      debugPrint('[ApiConsultas] Error obtenerProductosMarket: $e');
       return {'total': 0, 'productos': []};
     }
   }
@@ -1486,7 +1487,7 @@ class ApiConsultasService {
       }
       return [];
     } catch (e) {
-      print('[ApiConsultas] Error obtenerCategoriasMarket: $e');
+      debugPrint('[ApiConsultas] Error obtenerCategoriasMarket: $e');
       return [];
     }
   }
@@ -1508,7 +1509,7 @@ class ApiConsultasService {
       }
       return [];
     } catch (e) {
-      print('[ApiConsultas] Error obtenerMediosPagoMarket: $e');
+      debugPrint('[ApiConsultas] Error obtenerMediosPagoMarket: $e');
       return [];
     }
   }
@@ -1527,7 +1528,7 @@ class ApiConsultasService {
 
       return json.decode(response.body) as Map<String, dynamic>;
     } catch (e) {
-      print('[ApiConsultas] Error procesarVentaMarket: $e');
+      debugPrint('[ApiConsultas] Error procesarVentaMarket: $e');
       return {'exito': false, 'mensaje': 'Error: $e'};
     }
   }
@@ -1556,7 +1557,7 @@ class ApiConsultasService {
       }
       return {'total': 0, 'ventas': []};
     } catch (e) {
-      print('[ApiConsultas] Error obtenerHistorialMarket: $e');
+      debugPrint('[ApiConsultas] Error obtenerHistorialMarket: $e');
       return {'total': 0, 'ventas': []};
     }
   }
@@ -1580,7 +1581,7 @@ class ApiConsultasService {
 
       return json.decode(response.body) as Map<String, dynamic>;
     } catch (e) {
-      print('[ApiConsultas] Error imprimirMarket: $e');
+      debugPrint('[ApiConsultas] Error imprimirMarket: $e');
       return {'exito': false, 'mensaje': 'Error: $e'};
     }
   }
@@ -1601,7 +1602,7 @@ class ApiConsultasService {
       }
       return {'facturacion_pos': false, 'is_default_fe': false};
     } catch (e) {
-      print('[ApiConsultas] Error obtenerConfigFacturacionMarket: $e');
+      debugPrint('[ApiConsultas] Error obtenerConfigFacturacionMarket: $e');
       return {'facturacion_pos': false, 'is_default_fe': false};
     }
   }
@@ -1624,7 +1625,7 @@ class ApiConsultasService {
       }
       return [];
     } catch (e) {
-      print('[ApiConsultas] Error getManguerasPlaca: $e');
+      debugPrint('[ApiConsultas] Error getManguerasPlaca: $e');
       return [];
     }
   }
@@ -1641,7 +1642,7 @@ class ApiConsultasService {
       }
       return {'cara': cara, 'tiene_preautorizacion': false};
     } catch (e) {
-      print('[ApiConsultas] Error verificarCaraUsada: $e');
+      debugPrint('[ApiConsultas] Error verificarCaraUsada: $e');
       return {'cara': cara, 'tiene_preautorizacion': false};
     }
   }
@@ -1692,7 +1693,7 @@ class ApiConsultasService {
 
       return json.decode(response.body) as Map<String, dynamic>;
     } catch (e) {
-      print('[ApiConsultas] Error preAutorizarPlaca: $e');
+      debugPrint('[ApiConsultas] Error preAutorizarPlaca: $e');
       return {'exito': false, 'mensaje': 'Error: $e'};
     }
   }
@@ -1707,7 +1708,7 @@ class ApiConsultasService {
           .timeout(const Duration(seconds: 15));
       return json.decode(response.body) as Map<String, dynamic>;
     } catch (e) {
-      print('[ApiConsultas] Error validarPlacaSicom: $e');
+      debugPrint('[ApiConsultas] Error validarPlacaSicom: $e');
       return {'exito': false, 'mensaje': 'Error consultando SICOM: $e'};
     }
   }
@@ -1735,7 +1736,7 @@ class ApiConsultasService {
 
       return json.decode(response.body) as Map<String, dynamic>;
     } catch (e) {
-      print('[ApiConsultas] Error validarCupoIButton: $e');
+      debugPrint('[ApiConsultas] Error validarCupoIButton: $e');
       return {'exito': false, 'mensaje': 'Error: $e', 'data': null};
     }
   }
@@ -1835,7 +1836,7 @@ class ApiConsultasService {
       }
       return [];
     } catch (e) {
-      print('[ApiConsultas] Error getDispositivos: $e');
+      debugPrint('[ApiConsultas] Error getDispositivos: $e');
       return [];
     }
   }
@@ -1866,7 +1867,7 @@ class ApiConsultasService {
       final data = json.decode(response.body);
       return data['success'] == true;
     } catch (e) {
-      print('[ApiConsultas] Error crearDispositivo: $e');
+      debugPrint('[ApiConsultas] Error crearDispositivo: $e');
       return false;
     }
   }
@@ -1898,7 +1899,7 @@ class ApiConsultasService {
       final data = json.decode(response.body);
       return data['success'] == true;
     } catch (e) {
-      print('[ApiConsultas] Error editarDispositivo: $e');
+      debugPrint('[ApiConsultas] Error editarDispositivo: $e');
       return false;
     }
   }
@@ -1913,7 +1914,7 @@ class ApiConsultasService {
       final data = json.decode(response.body);
       return data['success'] == true;
     } catch (e) {
-      print('[ApiConsultas] Error eliminarDispositivo: $e');
+      debugPrint('[ApiConsultas] Error eliminarDispositivo: $e');
       return false;
     }
   }
@@ -1936,7 +1937,7 @@ class ApiConsultasService {
       }
       return [];
     } catch (e) {
-      print('[ApiConsultas] Error getUsuariosTag: $e');
+      debugPrint('[ApiConsultas] Error getUsuariosTag: $e');
       return [];
     }
   }
@@ -1958,7 +1959,7 @@ class ApiConsultasService {
 
       return json.decode(response.body) as Map<String, dynamic>;
     } catch (e) {
-      print('[ApiConsultas] Error registrarTag: $e');
+      debugPrint('[ApiConsultas] Error registrarTag: $e');
       return {'success': false, 'message': 'Error de conexión: $e'};
     }
   }
@@ -1998,7 +1999,7 @@ class ApiConsultasService {
       }
       return {};
     } catch (e) {
-      print('[ApiConsultas] Error getParametrizaciones: $e');
+      debugPrint('[ApiConsultas] Error getParametrizaciones: $e');
       return {};
     }
   }
@@ -2015,7 +2016,7 @@ class ApiConsultasService {
       final data = json.decode(response.body);
       return data['success'] == true;
     } catch (e) {
-      print('[ApiConsultas] Error updateParametrizaciones: $e');
+      debugPrint('[ApiConsultas] Error updateParametrizaciones: $e');
       return false;
     }
   }
@@ -2043,7 +2044,7 @@ class ApiConsultasService {
 
       return json.decode(response.body) as Map<String, dynamic>;
     } catch (e) {
-      print('[ApiConsultas] Error ejecutarSincronizacion: $e');
+      debugPrint('[ApiConsultas] Error ejecutarSincronizacion: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -2063,7 +2064,7 @@ class ApiConsultasService {
       }
       return [];
     } catch (e) {
-      print('[ApiConsultas] Error getHistorialSincronizacion: $e');
+      debugPrint('[ApiConsultas] Error getHistorialSincronizacion: $e');
       return [];
     }
   }
@@ -2085,7 +2086,7 @@ class ApiConsultasService {
       }
       return null;
     } catch (e) {
-      print('[ApiConsultas] Error getIpImpresora: $e');
+      debugPrint('[ApiConsultas] Error getIpImpresora: $e');
       return null;
     }
   }
@@ -2102,7 +2103,7 @@ class ApiConsultasService {
       final data = json.decode(response.body);
       return data['success'] == true;
     } catch (e) {
-      print('[ApiConsultas] Error guardarIpImpresora: $e');
+      debugPrint('[ApiConsultas] Error guardarIpImpresora: $e');
       return false;
     }
   }

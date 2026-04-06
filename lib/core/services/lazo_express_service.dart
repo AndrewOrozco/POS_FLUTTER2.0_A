@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../constants/app_constants.dart';
+import 'package:flutter/foundation.dart';
 
 /// Servicio para comunicarse con LazoExpress (Node.js)
 class LazoExpressService {
@@ -33,10 +34,10 @@ class LazoExpressService {
           return EstacionInfo.fromJson(json);
         }
       }
-      print('[LazoExpress] Error obteniendo estación: ${response.statusCode}');
+      debugPrint('[LazoExpress] Error obteniendo estación: ${response.statusCode}');
       return null;
     } catch (e) {
-      print('[LazoExpress] Error de conexión estación: $e');
+      debugPrint('[LazoExpress] Error de conexión estación: $e');
       return null;
     }
   }
@@ -61,10 +62,10 @@ class LazoExpressService {
           return EquipoInfo.fromJson(json);
         }
       }
-      print('[LazoExpress] Error obteniendo equipo: ${response.statusCode}');
+      debugPrint('[LazoExpress] Error obteniendo equipo: ${response.statusCode}');
       return null;
     } catch (e) {
-      print('[LazoExpress] Error de conexión equipo: $e');
+      debugPrint('[LazoExpress] Error de conexión equipo: $e');
       return null;
     }
   }
@@ -88,7 +89,7 @@ class LazoExpressService {
       }
       return VentasPendientes.empty();
     } catch (e) {
-      print('[LazoExpress] Error obteniendo ventas pendientes: $e');
+      debugPrint('[LazoExpress] Error obteniendo ventas pendientes: $e');
       return VentasPendientes.empty();
     }
   }
@@ -112,10 +113,10 @@ class LazoExpressService {
               .toList();
         }
       }
-      print('[LazoExpress] Error obteniendo turnos: ${response.statusCode}');
+      debugPrint('[LazoExpress] Error obteniendo turnos: ${response.statusCode}');
       return [];
     } catch (e) {
-      print('[LazoExpress] Error de conexión turnos: $e');
+      debugPrint('[LazoExpress] Error de conexión turnos: $e');
       return [];
     }
   }

@@ -65,7 +65,7 @@ class _ParametrizacionesPageState extends State<ParametrizacionesPage> {
         if (mounted) setState(() => _cargando = false);
       }
     } catch (e) {
-      print('[Parametrizaciones] Error: $e');
+      debugPrint('[Parametrizaciones] Error: $e');
       if (mounted) setState(() => _cargando = false);
     }
   }
@@ -288,7 +288,7 @@ class _ParametrizacionesPageState extends State<ParametrizacionesPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
       child: Row(
@@ -329,7 +329,7 @@ class _ParametrizacionesPageState extends State<ParametrizacionesPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -363,7 +363,7 @@ class _ParametrizacionesPageState extends State<ParametrizacionesPage> {
                       Text(
                         subtitle,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                           fontSize: 11,
                         ),
                       ),
@@ -391,7 +391,7 @@ class _ParametrizacionesPageState extends State<ParametrizacionesPage> {
         border: Border.all(color: Colors.grey.shade300),
       ),
       child: DropdownButtonFormField<String>(
-        value: _tipoAutorizacion,
+        initialValue: _tipoAutorizacion,
         isExpanded: true,
         decoration: InputDecoration(
           border: InputBorder.none,
@@ -434,7 +434,7 @@ class _ParametrizacionesPageState extends State<ParametrizacionesPage> {
               height: 42,
               decoration: BoxDecoration(
                 color: value
-                    ? AppTheme.terpeRed.withOpacity(0.08)
+                    ? AppTheme.terpeRed.withValues(alpha: 0.08)
                     : Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -468,8 +468,8 @@ class _ParametrizacionesPageState extends State<ParametrizacionesPage> {
             Switch(
               value: value,
               onChanged: onChanged,
-              activeColor: AppTheme.terpeRed,
-              activeTrackColor: AppTheme.terpeRed.withOpacity(0.3),
+              activeThumbColor: AppTheme.terpeRed,
+              activeTrackColor: AppTheme.terpeRed.withValues(alpha: 0.3),
             ),
           ],
         ),

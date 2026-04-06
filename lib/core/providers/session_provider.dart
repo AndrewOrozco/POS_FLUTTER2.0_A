@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/lazo_express_service.dart';
 import '../services/lazo_express_socket_service.dart';
+import 'package:flutter/foundation.dart';
 
 /// Provider para manejar la información de sesión:
 /// - Información de la EDS
@@ -85,20 +86,20 @@ class SessionProvider extends ChangeNotifier {
       if (estacionInfo != null) {
         _estacion = estacionInfo;
         _isConnected = true;
-        print('[SessionProvider] EDS: ${estacionInfo.alias}');
+        debugPrint('[SessionProvider] EDS: ${estacionInfo.alias}');
       }
 
       // Obtener info del equipo/POS
       final equipoInfo = await _lazoService.getEquipoInfo();
       if (equipoInfo != null) {
         _equipo = equipoInfo;
-        print('[SessionProvider] Equipo ID: ${equipoInfo.id}, Isla: ${equipoInfo.numeroIsla}');
+        debugPrint('[SessionProvider] Equipo ID: ${equipoInfo.id}, Isla: ${equipoInfo.numeroIsla}');
       }
 
       // Obtener promotores activos
       final promotores = await _lazoService.getTurnosActivos();
       _promotoresActivos = promotores;
-      print('[SessionProvider] Promotores activos: ${promotores.length}');
+      debugPrint('[SessionProvider] Promotores activos: ${promotores.length}');
 
       // Obtener ventas pendientes iniciales via REST
       await refrescarVentasPendientes();
@@ -122,7 +123,7 @@ class SessionProvider extends ChangeNotifier {
       });
 
     } catch (e) {
-      print('[SessionProvider] Error inicializando: $e');
+      debugPrint('[SessionProvider] Error inicializando: $e');
       _isConnected = false;
     }
 
@@ -135,7 +136,7 @@ class SessionProvider extends ChangeNotifier {
     _connectionStatusSub?.cancel();
     _connectionStatusSub = _lazoSocketService.connectionStatusStream.listen((isConnected) {
       if (isConnected && (_estacion == null || _equipo == null)) {
-        print('[SessionProvider] 🔄 LazoExpress conectado, reintentando obtener info...');
+        debugPrint('[SessionProvider] 🔄 LazoExpress conectado, reintentando obtener info...');
         _refrescarInfoFaltante();
       }
     });
@@ -149,7 +150,7 @@ class SessionProvider extends ChangeNotifier {
         if (estacionInfo != null) {
           _estacion = estacionInfo;
           _isConnected = true;
-          print('[SessionProvider] ✅ EDS obtenida: ${estacionInfo.alias}');
+          debugPrint('[SessionProvider] ✅ EDS obtenida: ${estacionInfo.alias}');
         }
       }
 
@@ -157,7 +158,7 @@ class SessionProvider extends ChangeNotifier {
         final equipoInfo = await _lazoService.getEquipoInfo();
         if (equipoInfo != null) {
           _equipo = equipoInfo;
-          print('[SessionProvider] ✅ Equipo obtenido - ID: ${equipoInfo.id}, Isla: ${equipoInfo.numeroIsla}');
+          debugPrint('[SessionProvider] ✅ Equipo obtenido - ID: ${equipoInfo.id}, Isla: ${equipoInfo.numeroIsla}');
         }
       }
 
@@ -166,7 +167,7 @@ class SessionProvider extends ChangeNotifier {
       
       notifyListeners();
     } catch (e) {
-      print('[SessionProvider] Error refrescando info faltante: $e');
+      debugPrint('[SessionProvider] Error refrescando info faltante: $e');
     }
   }
 
@@ -179,7 +180,7 @@ class SessionProvider extends ChangeNotifier {
       final ventasCanastilla = data['ventasCanastilla'] ?? 0;
       final sincronizado = data['sincronizado'] ?? true;
       
-      print('[SessionProvider] 💰 Socket.IO LazoExpress - Ventas pendientes: $numeroVentas');
+      debugPrint('[SessionProvider] 💰 Socket.IO LazoExpress - Ventas pendientes: $numeroVentas');
       
       // Solo actualizar si cambió
       if (numeroVentas != _ventasPendientes.numeroVentas) {
@@ -192,7 +193,7 @@ class SessionProvider extends ChangeNotifier {
         notifyListeners();
       }
     });
-    print('[SessionProvider] Escuchando ventas pendientes via Socket.IO (LazoExpress)');
+    debugPrint('[SessionProvider] Escuchando ventas pendientes via Socket.IO (LazoExpress)');
   }
 
   /// Escuchar ventas FE via Socket.IO (Facturación Electrónica + Datafono)
@@ -202,7 +203,7 @@ class SessionProvider extends ChangeNotifier {
       final fe = data['facturaElectronica'] ?? 0;
       final dat = data['datafono'] ?? 0;
       
-      print('[SessionProvider] 📋 Socket.IO LazoExpress - Ventas FE: F.E $fe, DAT $dat');
+      debugPrint('[SessionProvider] 📋 Socket.IO LazoExpress - Ventas FE: F.E $fe, DAT $dat');
       
       // Solo actualizar si cambió
       if (fe != _ventasFE.facturaElectronica || dat != _ventasFE.datafono) {
@@ -210,7 +211,7 @@ class SessionProvider extends ChangeNotifier {
         notifyListeners();
       }
     });
-    print('[SessionProvider] Escuchando ventas FE via Socket.IO (LazoExpress)');
+    debugPrint('[SessionProvider] Escuchando ventas FE via Socket.IO (LazoExpress)');
   }
 
   /// Refrescar información de turnos
@@ -220,7 +221,7 @@ class SessionProvider extends ChangeNotifier {
       _promotoresActivos = promotores;
       notifyListeners();
     } catch (e) {
-      print('[SessionProvider] Error refrescando turnos: $e');
+      debugPrint('[SessionProvider] Error refrescando turnos: $e');
     }
   }
 
@@ -230,11 +231,11 @@ class SessionProvider extends ChangeNotifier {
       final ventas = await _lazoService.getVentasPendientes();
       if (ventas.numeroVentas != _ventasPendientes.numeroVentas) {
         _ventasPendientes = ventas;
-        print('[SessionProvider] Ventas pendientes: ${ventas.numeroVentas}');
+        debugPrint('[SessionProvider] Ventas pendientes: ${ventas.numeroVentas}');
         notifyListeners();
       }
     } catch (e) {
-      print('[SessionProvider] Error refrescando ventas pendientes: $e');
+      debugPrint('[SessionProvider] Error refrescando ventas pendientes: $e');
     }
   }
 

@@ -178,7 +178,7 @@ class _FidelizarDialogState extends State<_FidelizarDialog> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(Icons.favorite_rounded, color: Colors.white, size: 28),
@@ -200,7 +200,7 @@ class _FidelizarDialogState extends State<_FidelizarDialog> {
                   Text(
                     widget.ventaInfo!,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 12,
                     ),
                   ),

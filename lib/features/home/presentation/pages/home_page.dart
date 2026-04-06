@@ -14,8 +14,8 @@ import '../../../../core/services/notification_websocket_service.dart';
 import '../../../../core/widgets/top_notification.dart';
 import '../../../../core/providers/session_provider.dart';
 import '../../../status_pump/status_pump.dart';
-import '../../../status_pump/presentation/providers/status_pump_provider.dart';
-import '../../../status_pump/domain/entities/surtidor_estado.dart';
+// import '../../../status_pump/presentation/providers/status_pump_provider.dart';
+// import '../../../status_pump/domain/entities/surtidor_estado.dart';
 import '../widgets/medios_pago_bottom_sheet.dart';
 import '../../../status_pump/presentation/pages/gestionar_venta_page.dart';
 import '../../../turnos/presentation/pages/turnos_page.dart';
@@ -87,7 +87,7 @@ class _HomePageState extends State<HomePage> {
     // Notificación "pendiente" de APP TERPEL: mostrar diálogo de countdown para escanear QR
     if (notification.isAppTerpel && notification.isPendiente) {
       if (PaymentWebSocketService().countdownDialogActive) {
-        print('[HomePage] Notificación pendiente APP TERPEL ignorada (CountdownDialog activo)');
+        debugPrint('[HomePage] Notificación pendiente APP TERPEL ignorada (CountdownDialog activo)');
         return;
       }
       _mostrarDialogoEscaneoQR(notification);
@@ -96,7 +96,7 @@ class _HomePageState extends State<HomePage> {
 
     // Si el CountdownDialog está activo, él ya maneja las notificaciones APP TERPEL
     if (PaymentWebSocketService().countdownDialogActive && notification.isAppTerpel) {
-      print('[HomePage] Notificación APP TERPEL ignorada (CountdownDialog activo)');
+      debugPrint('[HomePage] Notificación APP TERPEL ignorada (CountdownDialog activo)');
       return;
     }
 
@@ -105,7 +105,7 @@ class _HomePageState extends State<HomePage> {
     final now = DateTime.now();
     if (_lastPaymentNotificationTime != null &&
         now.difference(_lastPaymentNotificationTime!).inSeconds < 15) {
-      print('[HomePage] Notificación ignorada (dentro de ventana 15s)');
+      debugPrint('[HomePage] Notificación ignorada (dentro de ventana 15s)');
       return;
     }
     _lastPaymentNotificationTime = now;
@@ -228,7 +228,7 @@ class _HomePageState extends State<HomePage> {
   void _onBackendNotification(BackendNotification notif) {
     if (!mounted) return;
 
-    print('[HomePage] Backend notificación: [${notif.type}] ${notif.title} - ${notif.message}');
+    debugPrint('[HomePage] Backend notificación: [${notif.type}] ${notif.title} - ${notif.message}');
 
     // Mapear severity a tipo de notificación
     NotificationType type;
@@ -265,8 +265,8 @@ class _HomePageState extends State<HomePage> {
   /// Solo limpia el flag de ventas_curso y muestra notificación informativa.
   /// El resultado (aprobado/rechazado) llegará por WebSocket → _onPaymentNotification.
   void _onAppTerpelVentaTerminada(AppTerpelVentaTerminada evento) async {
-    print('[HomePage] Venta APP TERPEL terminada en cara ${evento.cara}');
-    print('[HomePage] LazoExpress se encarga de enviar al orquestador. Flutter solo escucha WS.');
+    debugPrint('[HomePage] Venta APP TERPEL terminada en cara ${evento.cara}');
+    debugPrint('[HomePage] LazoExpress se encarga de enviar al orquestador. Flutter solo escucha WS.');
     
     // IMPORTANTE: Limpiar isAppTerpel de ventas_curso INMEDIATAMENTE
     // para que la siguiente venta en la misma cara NO herede el flag
@@ -293,11 +293,11 @@ class _HomePageState extends State<HomePage> {
   /// en ct_movimientos, obtiene el movimiento_id, y envía a imprimir.
   /// Replica el comportamiento de Java: ControlImpresion.java
   void _onVentaTerminada(VentaTerminada evento) async {
-    print('[HomePage] Venta terminada en cara ${evento.cara}, monto: ${evento.monto}');
+    debugPrint('[HomePage] Venta terminada en cara ${evento.cara}, monto: ${evento.monto}');
     
     // Evitar impresión duplicada si la misma cara ya está en proceso
     if (_carasImprimiendo.contains(evento.cara)) {
-      print('[HomePage] Cara ${evento.cara} ya está en proceso de impresión, ignorando');
+      debugPrint('[HomePage] Cara ${evento.cara} ya está en proceso de impresión, ignorando');
       return;
     }
     _carasImprimiendo.add(evento.cara);
@@ -326,21 +326,21 @@ class _HomePageState extends State<HomePage> {
       final ventaActiva = await _apiService.getVentaActivaPorCara(cara);
       if (ventaActiva.found && ventaActiva.movimientoId != null) {
         if (ventaActiva.statusPump) {
-          print('[HomePage] statusPump=true cara $cara → LazoExpress envía a enviar-fe-pump');
+          debugPrint('[HomePage] statusPump=true cara $cara → LazoExpress envía a enviar-fe-pump');
         } else {
-          print('[HomePage] statusPump=false cara $cara → LazoExpress imprime localmente');
+          debugPrint('[HomePage] statusPump=false cara $cara → LazoExpress imprime localmente');
         }
       } else {
-        print('[HomePage] No se encontró movimiento para cara $cara (LazoExpress aún lo procesa)');
+        debugPrint('[HomePage] No se encontró movimiento para cara $cara (LazoExpress aún lo procesa)');
       }
     } catch (e) {
-      print('[HomePage] Error consultando venta para cara $cara: $e');
+      debugPrint('[HomePage] Error consultando venta para cara $cara: $e');
     }
   }
 
   /// Mostrar diálogo de countdown para escanear QR de App Terpel
   void _mostrarDialogoEscaneoQR(PaymentNotification notification) {
-    print('[HomePage] Mostrando diálogo de escaneo QR App Terpel');
+    debugPrint('[HomePage] Mostrando diálogo de escaneo QR App Terpel');
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -398,7 +398,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildSinTurnoOverlay(BuildContext context) {
     return Container(
-      color: Colors.black.withOpacity(0.55),
+      color: Colors.black.withValues(alpha: 0.55),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -410,7 +410,7 @@ class _HomePageState extends State<HomePage> {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withValues(alpha: 0.3),
                     blurRadius: 20,
                     spreadRadius: 2,
                   ),
@@ -444,7 +444,7 @@ class _HomePageState extends State<HomePage> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha: 0.2),
                     blurRadius: 12,
                   ),
                 ],
@@ -659,7 +659,7 @@ class _ScanQRCountdownDialogState extends State<ScanQRCountdownDialog>
       // Ignorar notificaciones pendientes duplicadas
       if (notification.isPendiente) return;
 
-      print('[ScanQRDialog] Resultado recibido: ${notification.titulo} - ${notification.estado}');
+      debugPrint('[ScanQRDialog] Resultado recibido: ${notification.titulo} - ${notification.estado}');
 
       setState(() {
         _resultadoRecibido = true;

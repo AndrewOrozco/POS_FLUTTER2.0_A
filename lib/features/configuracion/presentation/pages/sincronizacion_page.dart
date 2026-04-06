@@ -180,7 +180,7 @@ class _SincronizacionPageState extends State<SincronizacionPage> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: AppTheme.terpeRed.withOpacity(0.1),
+                              color: AppTheme.terpeRed.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
@@ -274,7 +274,7 @@ class _SincronizacionPageState extends State<SincronizacionPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Row(
         children: [
@@ -299,7 +299,7 @@ class _SincronizacionPageState extends State<SincronizacionPage> {
     final isSelected = mod.seleccionado;
 
     // Colores según estado
-    Color borderColor = isSelected ? AppTheme.terpeRed.withOpacity(0.3) : Colors.grey.shade200;
+    Color borderColor = isSelected ? AppTheme.terpeRed.withValues(alpha: 0.3) : Colors.grey.shade200;
     Color bgColor = Colors.white;
     Color iconColor = isSelected ? AppTheme.terpeRed : Colors.grey.shade400;
     Widget? statusBadge;
@@ -344,8 +344,8 @@ class _SincronizacionPageState extends State<SincronizacionPage> {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: borderColor, width: isSelected ? 1.5 : 1),
           boxShadow: isSelected
-              ? [BoxShadow(color: AppTheme.terpeRed.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 2))]
-              : [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 1))],
+              ? [BoxShadow(color: AppTheme.terpeRed.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 2))]
+              : [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 1))],
         ),
         child: Stack(
           children: [
@@ -437,7 +437,7 @@ class _SincronizacionPageState extends State<SincronizacionPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4))],
       ),
       child: Column(
         children: [
@@ -461,7 +461,7 @@ class _SincronizacionPageState extends State<SincronizacionPage> {
                     style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                 ),
-                Text('${duracion}ms', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12)),
+                Text('${duracion}ms', style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12)),
               ],
             ),
           ),
@@ -541,13 +541,13 @@ class _SincronizacionPageState extends State<SincronizacionPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
           children: [
             Text('$value', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
-            Text(label, style: TextStyle(fontSize: 11, color: color.withOpacity(0.8))),
+            Text(label, style: TextStyle(fontSize: 11, color: color.withValues(alpha: 0.8))),
           ],
         ),
       ),

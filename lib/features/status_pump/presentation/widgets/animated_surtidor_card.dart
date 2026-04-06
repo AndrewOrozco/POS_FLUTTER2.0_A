@@ -170,7 +170,7 @@ class _AnimatedSurtidorCardState extends State<AnimatedSurtidorCard>
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -202,7 +202,7 @@ class _AnimatedSurtidorCardState extends State<AnimatedSurtidorCard>
       height: 80,
       child: Transform(
         alignment: Alignment.center,
-        transform: Matrix4.identity()..scale(-1.0, 1.0),
+        transform: Matrix4.diagonal3Values(-1.0, 1.0, 1.0),
         child: Image.asset(
           'assets/icons/terpel/car_terpel.png',
           fit: BoxFit.contain,

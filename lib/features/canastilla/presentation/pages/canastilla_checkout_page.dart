@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+// import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/services/api_consultas_service.dart';
-import '../../../../core/models/api_models.dart';
+// import '../../../../core/models/api_models.dart';
 import '../../../../core/providers/session_provider.dart';
 
 /// Página de checkout / confirmación de venta de canastilla.
@@ -451,7 +451,7 @@ class _CanastillaCheckoutPageState extends State<CanastillaCheckoutPage> {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Material(
-                    color: sel ? const Color(0xFFFF8F00).withOpacity(0.12) : Colors.grey.shade50,
+                    color: sel ? const Color(0xFFFF8F00).withValues(alpha: 0.12) : Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(8),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(8),
@@ -496,7 +496,7 @@ class _CanastillaCheckoutPageState extends State<CanastillaCheckoutPage> {
               decoration: BoxDecoration(
                 color: const Color(0xFFF5F5F5),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFFF8F00).withOpacity(0.3)),
+                border: Border.all(color: const Color(0xFFFF8F00).withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [

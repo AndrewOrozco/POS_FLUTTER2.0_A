@@ -53,7 +53,7 @@ class _RegistroTagPageState extends State<RegistroTagPage> {
         });
       }
     } catch (e) {
-      print('[RegistroTag] Error: $e');
+      debugPrint('[RegistroTag] Error: $e');
       if (mounted) setState(() => _cargando = false);
     }
   }
@@ -189,7 +189,7 @@ class _RegistroTagPageState extends State<RegistroTagPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: AppTheme.terpeRed.withOpacity(0.1),
+                color: AppTheme.terpeRed.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -366,7 +366,7 @@ class _RegistroTagPageState extends State<RegistroTagPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -416,7 +416,7 @@ class _RegistroTagPageState extends State<RegistroTagPage> {
                           border: Border.all(color: Colors.grey.shade300),
                         ),
                         child: DropdownButtonFormField<String>(
-                          value: _usuarioSeleccionado?['identificacion']?.toString(),
+                          initialValue: _usuarioSeleccionado?['identificacion']?.toString(),
                           isExpanded: true,
                           decoration: InputDecoration(
                             border: InputBorder.none,
@@ -503,7 +503,7 @@ class _RegistroTagPageState extends State<RegistroTagPage> {
                             width: 46,
                             height: 46,
                             decoration: BoxDecoration(
-                              color: AppTheme.terpeRed.withOpacity(0.08),
+                              color: AppTheme.terpeRed.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(Icons.contactless_rounded, color: AppTheme.terpeRed, size: 26),
@@ -637,7 +637,7 @@ class _RegistroTagPageState extends State<RegistroTagPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
       child: Row(

@@ -103,7 +103,7 @@ class _CarAnimationWidgetState extends State<CarAnimationWidget>
                     width: 3,
                     height: 3,
                     decoration: BoxDecoration(
-                      color: AppTheme.terpeRed.withOpacity(0.8),
+                      color: AppTheme.terpeRed.withValues(alpha: 0.8),
                       shape: BoxShape.circle,
                     ),
                   ),

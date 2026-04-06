@@ -36,7 +36,7 @@ class ConsultaVentasPage extends StatelessWidget {
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
+                        color: Colors.black.withValues(alpha: 0.2),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -96,7 +96,7 @@ class ConsultaVentasPage extends StatelessWidget {
         children: [
           // Botón de regreso
           Material(
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(12),
             child: InkWell(
               onTap: () => Navigator.of(context).pop(),

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:flutter/foundation.dart';
 
 /// Servicio singleton para recibir notificaciones de pago del orquestador Go
 /// via WebSocket directo (ws://localhost:5555/ws/notifications)
@@ -43,12 +44,12 @@ class PaymentWebSocketService {
 
   void _doConnect() {
     if (_isConnected) {
-      print('[PaymentWS] Ya conectado');
+      debugPrint('[PaymentWS] Ya conectado');
       return;
     }
 
     final url = 'ws://$_host:$_port/ws/notifications';
-    print('[PaymentWS] Conectando a: $url');
+    debugPrint('[PaymentWS] Conectando a: $url');
 
     try {
       _channel = WebSocketChannel.connect(Uri.parse(url));
@@ -59,16 +60,16 @@ class PaymentWebSocketService {
             _isConnected = true;
             _reconnectAttempts = 0;
             _connectionStatusController.add(true);
-            print('[PaymentWS] Conectado al orquestador');
+            debugPrint('[PaymentWS] Conectado al orquestador');
           }
           _onMessage(data);
         },
         onError: (error) {
-          print('[PaymentWS] Error: $error');
+          debugPrint('[PaymentWS] Error: $error');
           _onDisconnected();
         },
         onDone: () {
-          print('[PaymentWS] Conexión cerrada');
+          debugPrint('[PaymentWS] Conexión cerrada');
           _onDisconnected();
         },
       );
@@ -76,7 +77,7 @@ class PaymentWebSocketService {
       // Marcar como conectado después de crear el channel
       // (el stream listener confirmará la conexión real al recibir el welcome)
     } catch (e) {
-      print('[PaymentWS] Error al conectar: $e');
+      debugPrint('[PaymentWS] Error al conectar: $e');
       _isConnected = false;
       _connectionStatusController.add(false);
       _scheduleReconnect();
@@ -89,7 +90,7 @@ class PaymentWebSocketService {
 
       // Ignorar mensajes de tipo "connected" (welcome message del hub)
       if (json['type'] == 'connected') {
-        print('[PaymentWS] ${json['message']}');
+        debugPrint('[PaymentWS] ${json['message']}');
         return;
       }
 
@@ -101,12 +102,12 @@ class PaymentWebSocketService {
         tipo: json['tipo']?.toString() ?? '',
       );
 
-      print('[PaymentWS] Notificacion: ${notification.titulo} - '
+      debugPrint('[PaymentWS] Notificacion: ${notification.titulo} - '
           '${notification.estado ? "APROBADO" : "RECHAZADO"} - ${notification.mensaje}');
 
       _notificationController.add(notification);
     } catch (e) {
-      print('[PaymentWS] Error parseando mensaje: $e');
+      debugPrint('[PaymentWS] Error parseando mensaje: $e');
     }
   }
 
@@ -121,7 +122,7 @@ class PaymentWebSocketService {
 
   void _scheduleReconnect() {
     if (_reconnectAttempts >= _maxReconnectAttempts) {
-      print('[PaymentWS] Maximo de reconexiones alcanzado');
+      debugPrint('[PaymentWS] Maximo de reconexiones alcanzado');
       return;
     }
 
@@ -130,7 +131,7 @@ class PaymentWebSocketService {
     final delaySec = (_reconnectAttempts < 3) ? 3 + _reconnectAttempts * 2 : 10;
     _reconnectAttempts++;
 
-    print('[PaymentWS] Reintentando en ${delaySec}s (intento $_reconnectAttempts/$_maxReconnectAttempts)');
+    debugPrint('[PaymentWS] Reintentando en ${delaySec}s (intento $_reconnectAttempts/$_maxReconnectAttempts)');
     _reconnectTimer = Timer(Duration(seconds: delaySec), () => _doConnect());
   }
 
@@ -141,7 +142,7 @@ class PaymentWebSocketService {
     _subscription?.cancel();
     _subscription = null;
     if (_channel != null) {
-      print('[PaymentWS] Desconectando...');
+      debugPrint('[PaymentWS] Desconectando...');
       _channel!.sink.close();
       _channel = null;
       _isConnected = false;

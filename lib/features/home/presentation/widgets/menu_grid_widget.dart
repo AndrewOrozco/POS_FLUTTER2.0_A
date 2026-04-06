@@ -409,9 +409,9 @@ class MenuGridWidget extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
-            border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+            border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
             borderRadius: BorderRadius.circular(14),
-            color: color.withOpacity(0.05),
+            color: color.withValues(alpha: 0.05),
           ),
           child: Row(
             children: [
@@ -445,7 +445,7 @@ class MenuGridWidget extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios, size: 18, color: color.withOpacity(0.5)),
+              Icon(Icons.arrow_forward_ios, size: 18, color: color.withValues(alpha: 0.5)),
             ],
           ),
         ),

@@ -1,5 +1,3 @@
-/// Barrel file para exportar todo el feature Status Pump
-library status_pump;
 
 // Domain
 export 'domain/entities/surtidor_estado.dart';

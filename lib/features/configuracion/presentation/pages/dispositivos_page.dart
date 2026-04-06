@@ -1,4 +1,4 @@
-import 'dart:convert';
+// import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../../core/services/api_consultas_service.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -45,7 +45,7 @@ class _DispositivosPageState extends State<DispositivosPage> {
         });
       }
     } catch (e) {
-      print('[Dispositivos] Error: $e');
+      debugPrint('[Dispositivos] Error: $e');
       if (mounted) setState(() => _cargando = false);
     }
   }
@@ -73,7 +73,7 @@ class _DispositivosPageState extends State<DispositivosPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: AppTheme.terpeRed.withOpacity(0.1),
+                      color: AppTheme.terpeRed.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -275,7 +275,7 @@ class _DispositivosPageState extends State<DispositivosPage> {
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.08),
+            color: color.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: color, size: 18),
@@ -290,7 +290,7 @@ class _DispositivosPageState extends State<DispositivosPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
       child: Row(
@@ -409,11 +409,11 @@ class _DispositivosPageState extends State<DispositivosPage> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: Colors.white.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                'ID: ${dispositivo!['id']}',
+                                'ID: ${dispositivo['id']}',
                                 style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
                               ),
                             ),
@@ -587,7 +587,7 @@ class _DispositivosPageState extends State<DispositivosPage> {
                               bool ok;
                               if (esEdicion) {
                                 ok = await _apiService.editarDispositivo(
-                                  id: dispositivo!['id'],
+                                  id: dispositivo['id'],
                                   tipos: tipo,
                                   conector: conector,
                                   interfaz: interfaz,
@@ -661,7 +661,7 @@ class _DispositivosPageState extends State<DispositivosPage> {
         border: Border.all(color: Colors.grey.shade300),
       ),
       child: DropdownButtonFormField<String>(
-        value: value,
+        initialValue: value,
         isExpanded: true,
         decoration: InputDecoration(
           labelText: label,

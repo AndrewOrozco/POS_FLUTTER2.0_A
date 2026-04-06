@@ -34,7 +34,7 @@ class _SurtidorListWidgetState extends State<SurtidorListWidget> {
         final surtidores = provider.surtidoresActivos;
         
         // Debug: siempre mostrar algo para verificar que funciona
-        print('[SurtidorListWidget] isConnected: ${provider.isConnected}, surtidores: ${surtidores.length}');
+        debugPrint('[SurtidorListWidget] isConnected: ${provider.isConnected}, surtidores: ${surtidores.length}');
         
         if (surtidores.isEmpty) {
           // Limpiar los animados si no hay surtidores

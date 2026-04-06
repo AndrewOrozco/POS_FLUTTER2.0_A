@@ -73,7 +73,7 @@ class _OpcionConsultaCardState extends State<OpcionConsultaCard>
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
-              color: _isHovered ? widget.color.withOpacity(0.05) : Colors.white,
+              color: _isHovered ? widget.color.withValues(alpha: 0.05) : Colors.white,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: _isHovered ? widget.color : Colors.grey.shade200,
@@ -82,8 +82,8 @@ class _OpcionConsultaCardState extends State<OpcionConsultaCard>
               boxShadow: [
                 BoxShadow(
                   color: _isHovered
-                      ? widget.color.withOpacity(0.2)
-                      : Colors.grey.withOpacity(0.1),
+                      ? widget.color.withValues(alpha: 0.2)
+                      : Colors.grey.withValues(alpha: 0.1),
                   blurRadius: _isHovered ? 20 : 10,
                   offset: const Offset(0, 4),
                 ),
@@ -101,12 +101,12 @@ class _OpcionConsultaCardState extends State<OpcionConsultaCard>
                     decoration: BoxDecoration(
                       color: _isHovered
                           ? widget.color
-                          : widget.color.withOpacity(0.1),
+                          : widget.color.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                       boxShadow: _isHovered
                           ? [
                               BoxShadow(
-                                color: widget.color.withOpacity(0.4),
+                                color: widget.color.withValues(alpha: 0.4),
                                 blurRadius: 20,
                                 offset: const Offset(0, 8),
                               ),

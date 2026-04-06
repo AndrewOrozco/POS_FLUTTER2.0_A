@@ -486,7 +486,7 @@ class _FidelizacionPageState extends State<FidelizacionPage>
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
+                color: Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: Colors.white24),
               ),
@@ -510,7 +510,7 @@ class _FidelizacionPageState extends State<FidelizacionPage>
                 Text(
                   'Vive Terpel — Programa de Lealtad',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.75),
+                    color: Colors.white.withValues(alpha: 0.75),
                     fontSize: 13,
                     fontWeight: FontWeight.w400,
                   ),
@@ -610,7 +610,7 @@ class _FidelizacionPageState extends State<FidelizacionPage>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 16,
               offset: const Offset(4, 0)),
         ],
@@ -695,7 +695,7 @@ class _FidelizacionPageState extends State<FidelizacionPage>
               boxShadow: isActive
                   ? [
                       BoxShadow(
-                        color: item.color.withOpacity(0.35),
+                        color: item.color.withValues(alpha: 0.35),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -710,9 +710,9 @@ class _FidelizacionPageState extends State<FidelizacionPage>
                   height: 38,
                   decoration: BoxDecoration(
                     color: isActive
-                        ? Colors.white.withOpacity(0.2)
+                        ? Colors.white.withValues(alpha: 0.2)
                         : item.disponible
-                            ? item.color.withOpacity(0.1)
+                            ? item.color.withValues(alpha: 0.1)
                             : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -847,7 +847,7 @@ class _FidelizacionPageState extends State<FidelizacionPage>
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFFFB300).withOpacity(0.3),
+                  color: const Color(0xFFFFB300).withValues(alpha: 0.3),
                   blurRadius: 30,
                   spreadRadius: 5,
                 ),
@@ -900,9 +900,9 @@ class _FidelizacionPageState extends State<FidelizacionPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.15)),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -944,7 +944,7 @@ class _FidelizacionPageState extends State<FidelizacionPage>
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 10),
                     ],
                   ),
@@ -1005,7 +1005,7 @@ class _FidelizacionPageState extends State<FidelizacionPage>
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                    color: Colors.black.withOpacity(0.04), blurRadius: 8),
+                    color: Colors.black.withValues(alpha: 0.04), blurRadius: 8),
               ],
             ),
             child: TecladoTactil(controller: _cedulaCtrl, soloNumeros: true),
@@ -1104,7 +1104,7 @@ class _FidelizacionPageState extends State<FidelizacionPage>
         border: Border.all(color: const Color(0xFF90CAF9)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1976D2).withOpacity(0.1),
+            color: const Color(0xFF1976D2).withValues(alpha: 0.1),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -1126,7 +1126,7 @@ class _FidelizacionPageState extends State<FidelizacionPage>
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF1976D2).withOpacity(0.3),
+                      color: const Color(0xFF1976D2).withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
                     ),
@@ -1203,7 +1203,7 @@ class _FidelizacionPageState extends State<FidelizacionPage>
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF4CAF50).withOpacity(0.1),
+                  color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.check_circle_rounded,
@@ -1375,7 +1375,7 @@ class _FidelizacionPageState extends State<FidelizacionPage>
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.03), blurRadius: 6),
+              color: Colors.black.withValues(alpha: 0.03), blurRadius: 6),
         ],
       ),
       child: Row(
@@ -1541,7 +1541,7 @@ class _FidelizacionPageState extends State<FidelizacionPage>
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.06),
+                color: Colors.black.withValues(alpha: 0.06),
                 blurRadius: 20,
                 offset: const Offset(0, 6)),
           ],
@@ -1552,7 +1552,7 @@ class _FidelizacionPageState extends State<FidelizacionPage>
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: const Color(0xFFE65100).withOpacity(0.08),
+                color: const Color(0xFFE65100).withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.redeem_rounded,
@@ -1571,7 +1571,7 @@ class _FidelizacionPageState extends State<FidelizacionPage>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFFE65100).withOpacity(0.08),
+                color: const Color(0xFFE65100).withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Row(
@@ -1688,7 +1688,7 @@ class _FidelizacionPageState extends State<FidelizacionPage>
               border: Border.all(color: Colors.grey.shade200),
               boxShadow: [
                 BoxShadow(
-                    color: Colors.black.withOpacity(0.03), blurRadius: 8),
+                    color: Colors.black.withValues(alpha: 0.03), blurRadius: 8),
               ],
             ),
             child: Column(
@@ -1941,7 +1941,7 @@ class _FidelizacionPageState extends State<FidelizacionPage>
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, color: color, size: 24),

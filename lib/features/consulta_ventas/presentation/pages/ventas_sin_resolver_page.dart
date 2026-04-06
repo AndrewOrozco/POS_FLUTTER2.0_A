@@ -62,7 +62,7 @@ class _VentasSinResolverPageState extends State<VentasSinResolverPage> {
     _paymentWsSubscription = PaymentWebSocketService().notificationStream.listen((notification) {
       if (!mounted) return;
       
-      print('[VentasSinResolver] Notificación de pago recibida: '
+      debugPrint('[VentasSinResolver] Notificación de pago recibida: '
           '${notification.titulo} - ${notification.estado ? "APROBADO" : "RECHAZADO"}');
       
       // Refrescar la tabla automáticamente al recibir cualquier notificación de pago
@@ -392,7 +392,8 @@ class _VentasSinResolverPageState extends State<VentasSinResolverPage> {
     
     final ventaData = {'identificadorMovimiento': _ventaSeleccionada!.id};
     final response = await _lazoService.enviarVenta(ventaData: ventaData);
-    
+
+    if (!mounted) return;
     Navigator.pop(context);
     
     if (response.success) {
@@ -521,7 +522,8 @@ class _VentasSinResolverPageState extends State<VentasSinResolverPage> {
       documentoCliente: documento,
       nombreCliente: nombre,
     );
-    
+
+    if (!mounted) return;
     Navigator.pop(context);
     if (response.success) {
       _mostrarExito(response.message);

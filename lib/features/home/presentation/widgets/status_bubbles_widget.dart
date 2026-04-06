@@ -69,7 +69,7 @@ class _StatusBubblesWidgetState extends State<StatusBubblesWidget> {
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 3,
                 offset: const Offset(0, 1),
               ),
@@ -108,7 +108,7 @@ class _StatusBubblesWidgetState extends State<StatusBubblesWidget> {
         border: Border.all(color: Colors.grey.shade300, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 3,
             offset: const Offset(0, 1),
           ),
@@ -159,7 +159,7 @@ class _StatusBubblesWidgetState extends State<StatusBubblesWidget> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 3,
                 offset: const Offset(0, 1),
               ),
@@ -234,7 +234,7 @@ class _StatusBubblesWidgetState extends State<StatusBubblesWidget> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 3,
                 offset: const Offset(0, 1),
               ),

@@ -223,7 +223,7 @@ class _ImpresoraPageState extends State<ImpresoraPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Row(
         children: [
@@ -257,7 +257,7 @@ class _ImpresoraPageState extends State<ImpresoraPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 3))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 3))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,7 +267,7 @@ class _ImpresoraPageState extends State<ImpresoraPage> {
               Container(
                 width: 40, height: 40,
                 decoration: BoxDecoration(
-                  color: (_ipActual != null ? Colors.green : Colors.grey).withOpacity(0.1),
+                  color: (_ipActual != null ? Colors.green : Colors.grey).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -321,10 +321,10 @@ class _ImpresoraPageState extends State<ImpresoraPage> {
               margin: const EdgeInsets.only(top: 12),
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: (_pruebaExitosa == true ? Colors.green : Colors.red).withOpacity(0.08),
+                color: (_pruebaExitosa == true ? Colors.green : Colors.red).withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: (_pruebaExitosa == true ? Colors.green : Colors.red).withOpacity(0.2),
+                  color: (_pruebaExitosa == true ? Colors.green : Colors.red).withValues(alpha: 0.2),
                 ),
               ),
               child: Row(
@@ -372,7 +372,7 @@ class _ImpresoraPageState extends State<ImpresoraPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 3))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 3))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -443,7 +443,7 @@ class _ImpresoraPageState extends State<ImpresoraPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 3))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 3))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -526,10 +526,10 @@ class _ImpresoraPageState extends State<ImpresoraPage> {
                         color: esActual ? Colors.green.shade50 : Colors.white,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: esActual ? Colors.green.shade400 : AppTheme.terpeRed.withOpacity(0.3),
+                          color: esActual ? Colors.green.shade400 : AppTheme.terpeRed.withValues(alpha: 0.3),
                           width: esActual ? 2 : 1,
                         ),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2))],
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))],
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,

@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:socket_io_client/socket_io_client.dart' as io;
+import 'package:flutter/foundation.dart';
 
 /// Servicio singleton para manejar la conexión Socket.IO con Flask
 /// Escucha eventos de estado de surtidores en tiempo real
@@ -13,7 +14,7 @@ class SocketIOService {
   factory SocketIOService() => _instance;
   SocketIOService._internal();
 
-  IO.Socket? _socket;
+  io.Socket? _socket;
   bool _isConnected = false;
   Timer? _reconnectTimer;
 
@@ -42,14 +43,14 @@ class SocketIOService {
 
     // Si ya está conectado, no hacer nada
     if (_socket != null && _isConnected) {
-      print('[SocketIO] Ya está conectado');
+      debugPrint('[SocketIO] Ya está conectado');
       return;
     }
 
     // Si el socket existe pero NO está conectado (quedó zombie),
     // destruirlo y crear uno nuevo
     if (_socket != null && !_isConnected) {
-      print('[SocketIO] Socket zombie detectado, destruyendo...');
+      debugPrint('[SocketIO] Socket zombie detectado, destruyendo...');
       _destroySocket();
     }
 
@@ -57,13 +58,13 @@ class SocketIOService {
     _reconnectTimer?.cancel();
 
     final url = '$host:$port';
-    print('[SocketIO] ====================================');
-    print('[SocketIO] Intentando conectar a: $url');
-    print('[SocketIO] ====================================');
+    debugPrint('[SocketIO] ====================================');
+    debugPrint('[SocketIO] Intentando conectar a: $url');
+    debugPrint('[SocketIO] ====================================');
 
     try {
       // Crear socket con reconexión robusta
-      _socket = IO.io(
+      _socket = io.io(
         url,
         <String, dynamic>{
           'transports': ['websocket'],
@@ -79,9 +80,9 @@ class SocketIOService {
 
       _setupListeners();
       _socket!.connect();
-      print('[SocketIO] Socket creado, esperando conexión...');
+      debugPrint('[SocketIO] Socket creado, esperando conexión...');
     } catch (e) {
-      print('[SocketIO] ERROR creando socket: $e');
+      debugPrint('[SocketIO] ERROR creando socket: $e');
       _connectionStatusController.add(false);
       _scheduleFullReconnect();
     }
@@ -90,50 +91,50 @@ class SocketIOService {
   /// Configurar listeners de eventos
   void _setupListeners() {
     _socket!.onConnect((_) {
-      print('[SocketIO] ✅ Conectado al servidor Flask');
+      debugPrint('[SocketIO] ✅ Conectado al servidor Flask');
       _isConnected = true;
       _reconnectTimer?.cancel(); // Cancelar reconexión manual si había
       _connectionStatusController.add(true);
     });
 
     _socket!.onDisconnect((_) {
-      print('[SocketIO] ❌ Desconectado del servidor');
+      debugPrint('[SocketIO] ❌ Desconectado del servidor');
       _isConnected = false;
       _connectionStatusController.add(false);
       // Socket.IO intentará reconectar automáticamente (hasta 99999 veces)
     });
 
     _socket!.onConnectError((error) {
-      print('[SocketIO] ⚠️ Error de conexión: $error');
+      debugPrint('[SocketIO] ⚠️ Error de conexión: $error');
       _isConnected = false;
       _connectionStatusController.add(false);
     });
 
     _socket!.onReconnect((_) {
-      print('[SocketIO] 🔄 Reconectado exitosamente');
+      debugPrint('[SocketIO] 🔄 Reconectado exitosamente');
       _isConnected = true;
       _reconnectTimer?.cancel();
       _connectionStatusController.add(true);
     });
 
     _socket!.onReconnectAttempt((attemptNumber) {
-      print('[SocketIO] 🔄 Intento de reconexión #$attemptNumber');
+      debugPrint('[SocketIO] 🔄 Intento de reconexión #$attemptNumber');
     });
 
     _socket!.onReconnectFailed((_) {
       // Esto solo pasa si se agotan los 99999 intentos (muy raro)
       // o si hay un error catastrófico. Activar reconexión manual.
-      print('[SocketIO] ⚠️ Reconexión Socket.IO agotada, activando respaldo manual...');
+      debugPrint('[SocketIO] ⚠️ Reconexión Socket.IO agotada, activando respaldo manual...');
       _scheduleFullReconnect();
     });
 
     _socket!.onReconnectError((error) {
-      print('[SocketIO] ⚠️ Error en reconexión: $error');
+      debugPrint('[SocketIO] ⚠️ Error en reconexión: $error');
     });
 
     // Escuchar evento de estado de surtidor desde Flask
     _socket!.on('estado_surtidor', (data) {
-      print('[SocketIO] 📡 Estado surtidor recibido: $data');
+      debugPrint('[SocketIO] 📡 Estado surtidor recibido: $data');
       if (data != null) {
         _estadoSurtidorController.add(Map<String, dynamic>.from(data));
       }
@@ -141,7 +142,7 @@ class SocketIOService {
 
     // Escuchar evento de cliente conectado (confirmación)
     _socket!.on('cliente_conectado', (data) {
-      print('[SocketIO] 👋 Servidor confirmó conexión: $data');
+      debugPrint('[SocketIO] 👋 Servidor confirmó conexión: $data');
     });
   }
 
@@ -150,9 +151,9 @@ class SocketIOService {
   /// Se activa cuando Socket.IO agota sus reintentos internos.
   void _scheduleFullReconnect() {
     _reconnectTimer?.cancel();
-    print('[SocketIO] ⏰ Reintento completo en 10 segundos...');
+    debugPrint('[SocketIO] ⏰ Reintento completo en 10 segundos...');
     _reconnectTimer = Timer(const Duration(seconds: 10), () {
-      print('[SocketIO] 🔁 Ejecutando reconexión completa (nuevo socket)');
+      debugPrint('[SocketIO] 🔁 Ejecutando reconexión completa (nuevo socket)');
       _destroySocket();
       connect(host: _lastHost, port: _lastPort);
     });
@@ -173,7 +174,7 @@ class SocketIOService {
   void disconnect() {
     _reconnectTimer?.cancel();
     if (_socket != null) {
-      print('[SocketIO] Desconectando...');
+      debugPrint('[SocketIO] Desconectando...');
       _destroySocket();
       _connectionStatusController.add(false);
     }
@@ -184,7 +185,7 @@ class SocketIOService {
     if (_socket != null && _isConnected) {
       _socket!.emit(event, data);
     } else {
-      print('[SocketIO] No conectado, no se puede emitir: $event');
+      debugPrint('[SocketIO] No conectado, no se puede emitir: $event');
     }
   }
 

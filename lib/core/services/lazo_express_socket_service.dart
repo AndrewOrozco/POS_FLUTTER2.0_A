@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:socket_io_client/socket_io_client.dart' as io;
+import 'package:flutter/foundation.dart';
 
 /// Servicio singleton para manejar la conexión Socket.IO con LazoExpress
 /// Escucha eventos de ventas pendientes en tiempo real desde ms-lazo-express
@@ -8,7 +9,7 @@ class LazoExpressSocketService {
   factory LazoExpressSocketService() => _instance;
   LazoExpressSocketService._internal();
 
-  IO.Socket? _socket;
+  io.Socket? _socket;
   bool _isConnected = false;
 
   // Stream controllers para eventos
@@ -32,17 +33,17 @@ class LazoExpressSocketService {
   /// Por defecto usa localhost:8010 (donde corre LazoExpress)
   void connect({String host = 'http://127.0.0.1', int port = 8010}) {
     if (_socket != null && _isConnected) {
-      print('[LazoExpressSocket] Ya está conectado');
+      debugPrint('[LazoExpressSocket] Ya está conectado');
       return;
     }
 
     final url = '$host:$port';
-    print('[LazoExpressSocket] ====================================');
-    print('[LazoExpressSocket] Intentando conectar a: $url');
-    print('[LazoExpressSocket] ====================================');
+    debugPrint('[LazoExpressSocket] ====================================');
+    debugPrint('[LazoExpressSocket] Intentando conectar a: $url');
+    debugPrint('[LazoExpressSocket] ====================================');
 
     try {
-      _socket = IO.io(
+      _socket = io.io(
         url,
         <String, dynamic>{
           'transports': ['websocket'],
@@ -58,9 +59,9 @@ class LazoExpressSocketService {
 
       _setupListeners();
       _socket!.connect();
-      print('[LazoExpressSocket] Socket creado, esperando conexión...');
+      debugPrint('[LazoExpressSocket] Socket creado, esperando conexión...');
     } catch (e) {
-      print('[LazoExpressSocket] ERROR creando socket: $e');
+      debugPrint('[LazoExpressSocket] ERROR creando socket: $e');
       _connectionStatusController.add(false);
     }
   }
@@ -68,32 +69,32 @@ class LazoExpressSocketService {
   /// Configurar listeners de eventos
   void _setupListeners() {
     _socket!.onConnect((_) {
-      print('[LazoExpressSocket] ✅ Conectado a LazoExpress');
+      debugPrint('[LazoExpressSocket] ✅ Conectado a LazoExpress');
       _isConnected = true;
       _connectionStatusController.add(true);
     });
 
     _socket!.onDisconnect((_) {
-      print('[LazoExpressSocket] ❌ Desconectado de LazoExpress');
+      debugPrint('[LazoExpressSocket] ❌ Desconectado de LazoExpress');
       _isConnected = false;
       _connectionStatusController.add(false);
     });
 
     _socket!.onConnectError((error) {
-      print('[LazoExpressSocket] ⚠️ Error de conexión: $error');
+      debugPrint('[LazoExpressSocket] ⚠️ Error de conexión: $error');
       _isConnected = false;
       _connectionStatusController.add(false);
     });
 
     _socket!.onReconnect((_) {
-      print('[LazoExpressSocket] 🔄 Reconectado a LazoExpress');
+      debugPrint('[LazoExpressSocket] 🔄 Reconectado a LazoExpress');
       _isConnected = true;
       _connectionStatusController.add(true);
     });
 
     // Escuchar evento de ventas pendientes desde LazoExpress (ms-lazo-express)
     _socket!.on('ventas_pendientes', (data) {
-      print('[LazoExpressSocket] 💰 Ventas pendientes recibidas: $data');
+      debugPrint('[LazoExpressSocket] 💰 Ventas pendientes recibidas: $data');
       if (data != null) {
         _ventasPendientesController.add(Map<String, dynamic>.from(data));
       }
@@ -101,7 +102,7 @@ class LazoExpressSocketService {
 
     // Escuchar evento de ventas FE (Facturación Electrónica + Datafono)
     _socket!.on('ventas_fe', (data) {
-      print('[LazoExpressSocket] 📋 Ventas FE recibidas: $data');
+      debugPrint('[LazoExpressSocket] 📋 Ventas FE recibidas: $data');
       if (data != null) {
         _ventasFEController.add(Map<String, dynamic>.from(data));
       }
@@ -111,7 +112,7 @@ class LazoExpressSocketService {
   /// Desconectar del servidor
   void disconnect() {
     if (_socket != null) {
-      print('[LazoExpressSocket] Desconectando...');
+      debugPrint('[LazoExpressSocket] Desconectando...');
       _socket!.disconnect();
       _socket!.dispose();
       _socket = null;

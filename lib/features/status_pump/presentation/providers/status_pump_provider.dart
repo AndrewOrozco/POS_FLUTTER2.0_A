@@ -74,13 +74,13 @@ class StatusPumpProvider extends ChangeNotifier {
 
   /// Inicializar conexión con Flask
   void initialize({String host = 'http://127.0.0.1', int port = 5000}) {
-    print('[StatusPumpProvider] Inicializando conexión a $host:$port');
+    debugPrint('[StatusPumpProvider] Inicializando conexión a $host:$port');
     
     // Escuchar estados de surtidor
     _estadoSubscription = _socketService.estadoSurtidorStream.listen(
       _onEstadoSurtidorRecibido,
       onError: (error) {
-        print('[StatusPumpProvider] Error en stream: $error');
+        debugPrint('[StatusPumpProvider] Error en stream: $error');
         _connectionError = error.toString();
         notifyListeners();
       },
@@ -105,7 +105,7 @@ class StatusPumpProvider extends ChangeNotifier {
   void _onEstadoSurtidorRecibido(Map<String, dynamic> data) {
     try {
       final estado = SurtidorEstado.fromFlaskJson(data);
-      print('[StatusPumpProvider] Estado recibido: $estado');
+      debugPrint('[StatusPumpProvider] Estado recibido: $estado');
       
       // Actualizar o agregar surtidor
       if (estado.estado == EstadoSurtidor.idle || 
@@ -117,7 +117,7 @@ class StatusPumpProvider extends ChangeNotifier {
         if (estado.estado == EstadoSurtidor.terminatedPEOT || 
             estado.estado == EstadoSurtidor.terminatedFEOT) {
           final montoVenta = existente?.monto ?? 0.0;
-          print('[StatusPumpProvider] Venta terminada en cara ${estado.cara}, monto: $montoVenta');
+          debugPrint('[StatusPumpProvider] Venta terminada en cara ${estado.cara}, monto: $montoVenta');
           _ventaTerminadaController.add(VentaTerminada(
             cara: estado.cara,
             monto: montoVenta,
@@ -132,7 +132,7 @@ class StatusPumpProvider extends ChangeNotifier {
              estado.estado == EstadoSurtidor.terminatedFEOT)) {
           // La venta terminó de despachar Y tenía APP TERPEL asignado
           // → Emitir evento para que la UI envíe al orquestador
-          print('[StatusPumpProvider] Venta con APP TERPEL terminada en cara ${estado.cara}');
+          debugPrint('[StatusPumpProvider] Venta con APP TERPEL terminada en cara ${estado.cara}');
           _appTerpelTerminadaController.add(AppTerpelVentaTerminada(
             cara: estado.cara,
             monto: existente.monto,
@@ -155,9 +155,9 @@ class StatusPumpProvider extends ChangeNotifier {
         if (tienePlaca || tieneMedioEspecial) {
           // Actualizar datos del surtidor PERO conservar placa, clienteNombre y medioPagoEspecial
           _surtidores[estado.cara] = estado.copyWith(
-            placa: tienePlaca ? existente!.placa : null,
-            clienteNombre: tienePlaca ? existente!.clienteNombre : null,
-            medioPagoEspecial: tieneMedioEspecial ? existente!.medioPagoEspecial : null,
+            placa: tienePlaca ? existente.placa : null,
+            clienteNombre: tienePlaca ? existente.clienteNombre : null,
+            medioPagoEspecial: tieneMedioEspecial ? existente.medioPagoEspecial : null,
           );
         } else if (tienePendiente) {
           // Aplicar placa pendiente de RUMBO (primera vez que aparece el surtidor)
@@ -166,7 +166,7 @@ class StatusPumpProvider extends ChangeNotifier {
             clienteNombre: pendiente.clienteNombre,
           );
           _placasPendientes.remove(estado.cara);
-          print('[StatusPumpProvider] Placa RUMBO aplicada: cara=${estado.cara} placa=${pendiente.placa}');
+          debugPrint('[StatusPumpProvider] Placa RUMBO aplicada: cara=${estado.cara} placa=${pendiente.placa}');
         } else {
           _surtidores[estado.cara] = estado;
         }
@@ -174,7 +174,7 @@ class StatusPumpProvider extends ChangeNotifier {
       
       notifyListeners();
     } catch (e) {
-      print('[StatusPumpProvider] Error parseando estado: $e');
+      debugPrint('[StatusPumpProvider] Error parseando estado: $e');
     }
   }
 
@@ -212,7 +212,7 @@ class StatusPumpProvider extends ChangeNotifier {
         clienteNombre: clienteNombre,
       );
     }
-    print('[StatusPumpProvider] Placa RUMBO asignada: cara=$cara placa=$placa');
+    debugPrint('[StatusPumpProvider] Placa RUMBO asignada: cara=$cara placa=$placa');
   }
 
   /// Asignar medio de pago especial (APP TERPEL, etc.) a un surtidor

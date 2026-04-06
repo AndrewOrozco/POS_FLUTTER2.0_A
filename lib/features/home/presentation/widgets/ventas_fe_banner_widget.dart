@@ -42,7 +42,7 @@ class VentasFEBannerWidget extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.red.shade900.withOpacity(0.3),
+                  color: Colors.red.shade900.withValues(alpha: 0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),

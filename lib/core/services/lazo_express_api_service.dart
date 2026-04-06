@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 
 /// Servicio para interactuar con LazoExpress API (puerto 8010)
 /// 
@@ -30,7 +31,7 @@ class LazoExpressApiService {
         headers: _headers,
       );
       
-      print('[LazoExpressAPI] getMediosPago response: ${response.statusCode}');
+      debugPrint('[LazoExpressAPI] getMediosPago response: ${response.statusCode}');
       
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -51,7 +52,7 @@ class LazoExpressApiService {
       }
       return [];
     } catch (e) {
-      print('[LazoExpressAPI] Error getMediosPago: $e');
+      debugPrint('[LazoExpressAPI] Error getMediosPago: $e');
       return [];
     }
   }
@@ -71,7 +72,7 @@ class LazoExpressApiService {
         'validarTurno': true,
       };
       
-      print('[LazoExpressAPI] PUT medios-de-pagos: $body');
+      debugPrint('[LazoExpressAPI] PUT medios-de-pagos: $body');
       
       final response = await http.put(
         Uri.parse('$_baseUrl/api/venta/medios-de-pagos'),
@@ -79,7 +80,7 @@ class LazoExpressApiService {
         body: json.encode(body),
       );
       
-      print('[LazoExpressAPI] Response ${response.statusCode}: ${response.body}');
+      debugPrint('[LazoExpressAPI] Response ${response.statusCode}: ${response.body}');
       
       if (response.statusCode == 200 || response.statusCode == 201) {
         return ApiResponse(
@@ -95,7 +96,7 @@ class LazoExpressApiService {
         );
       }
     } catch (e) {
-      print('[LazoExpressAPI] Error actualizarMediosPago: $e');
+      debugPrint('[LazoExpressAPI] Error actualizarMediosPago: $e');
       return ApiResponse(
         success: false,
         message: 'Error de conexión: $e',
@@ -135,7 +136,7 @@ class LazoExpressApiService {
         if (tipoVenta != null) 'tipoVenta': tipoVenta,
       };
       
-      print('[LazoExpressAPI] PUT actualizar-datos-ventas: $body');
+      debugPrint('[LazoExpressAPI] PUT actualizar-datos-ventas: $body');
       
       final response = await http.put(
         Uri.parse('$_baseUrl/api/venta/actualizar-datos-ventas'),
@@ -143,7 +144,7 @@ class LazoExpressApiService {
         body: json.encode(body),
       );
       
-      print('[LazoExpressAPI] Response ${response.statusCode}: ${response.body}');
+      debugPrint('[LazoExpressAPI] Response ${response.statusCode}: ${response.body}');
       
       if (response.statusCode == 200 || response.statusCode == 201) {
         return ApiResponse(
@@ -159,7 +160,7 @@ class LazoExpressApiService {
         );
       }
     } catch (e) {
-      print('[LazoExpressAPI] Error actualizarDatosVenta: $e');
+      debugPrint('[LazoExpressAPI] Error actualizarDatosVenta: $e');
       return ApiResponse(
         success: false,
         message: 'Error de conexión: $e',
@@ -177,7 +178,7 @@ class LazoExpressApiService {
     required Map<String, dynamic> ventaData,
   }) async {
     try {
-      print('[LazoExpressAPI] POST /api/venta/subir: $ventaData');
+      debugPrint('[LazoExpressAPI] POST /api/venta/subir: $ventaData');
       
       final response = await http.post(
         Uri.parse('$_baseUrl/api/venta/subir'),
@@ -185,7 +186,7 @@ class LazoExpressApiService {
         body: json.encode(ventaData),
       );
       
-      print('[LazoExpressAPI] Response ${response.statusCode}: ${response.body}');
+      debugPrint('[LazoExpressAPI] Response ${response.statusCode}: ${response.body}');
       
       if (response.statusCode == 200 || response.statusCode == 201) {
         return ApiResponse(
@@ -201,7 +202,7 @@ class LazoExpressApiService {
         );
       }
     } catch (e) {
-      print('[LazoExpressAPI] Error enviarVenta: $e');
+      debugPrint('[LazoExpressAPI] Error enviarVenta: $e');
       return ApiResponse(
         success: false,
         message: 'Error de conexión: $e',
@@ -229,7 +230,7 @@ class LazoExpressApiService {
         'nombrePersona': nombreCliente.toUpperCase(),
       };
       
-      print('[LazoExpressAPI] PUT actualizar-datos-ventas (RUMBO): $body');
+      debugPrint('[LazoExpressAPI] PUT actualizar-datos-ventas (RUMBO): $body');
       
       final response = await http.put(
         Uri.parse('$_baseUrl/api/venta/actualizar-datos-ventas'),
@@ -237,7 +238,7 @@ class LazoExpressApiService {
         body: json.encode(body),
       );
       
-      print('[LazoExpressAPI] Response ${response.statusCode}: ${response.body}');
+      debugPrint('[LazoExpressAPI] Response ${response.statusCode}: ${response.body}');
       
       if (response.statusCode == 200 || response.statusCode == 201) {
         return ApiResponse(
@@ -253,7 +254,7 @@ class LazoExpressApiService {
         );
       }
     } catch (e) {
-      print('[LazoExpressAPI] Error actualizarDatosRumbo: $e');
+      debugPrint('[LazoExpressAPI] Error actualizarDatosRumbo: $e');
       return ApiResponse(
         success: false,
         message: 'Error de conexión: $e',
@@ -279,7 +280,7 @@ class LazoExpressApiService {
       }
       return null;
     } catch (e) {
-      print('[LazoExpressAPI] Error getIdentificadorEquipo: $e');
+      debugPrint('[LazoExpressAPI] Error getIdentificadorEquipo: $e');
       return null;
     }
   }

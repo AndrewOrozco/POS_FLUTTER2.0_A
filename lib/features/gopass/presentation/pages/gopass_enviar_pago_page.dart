@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/services/api_consultas_service.dart';
-import '../../../../core/models/api_models.dart';
+// import '../../../../core/models/api_models.dart';
 import '../../../../core/widgets/teclado_tactil.dart';
 
 /// Página Enviar Pago GoPass - Wizard multi-paso
@@ -598,7 +598,7 @@ class _GopassEnviarPagoPageState extends State<GopassEnviarPagoPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(mensaje, textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: color.shade700)),

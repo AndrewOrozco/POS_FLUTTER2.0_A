@@ -831,7 +831,7 @@ class _AppTerpelCountdownDialogState extends State<AppTerpelCountdownDialog>
       // Solo procesar notificaciones de APP TERPEL (codigo "4")
       if (!notification.isAppTerpel) return;
       
-      print('[CountdownDialog] Notificación WS recibida: ${notification.titulo} - ${notification.estado}');
+      debugPrint('[CountdownDialog] Notificación WS recibida: ${notification.titulo} - ${notification.estado}');
       
       setState(() {
         if (notification.isAprobado) {
@@ -893,7 +893,7 @@ class _AppTerpelCountdownDialogState extends State<AppTerpelCountdownDialog>
         }
       });
 
-      print('[CountdownDialog] FE resultado: ${result['ok']} - $_feMensaje');
+      debugPrint('[CountdownDialog] FE resultado: ${result['ok']} - $_feMensaje');
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -902,7 +902,7 @@ class _AppTerpelCountdownDialogState extends State<AppTerpelCountdownDialog>
         _feMensaje = 'FE se reintentará automáticamente';
         _mensajeDetalle = 'Pago aprobado ✓ FE se reintentará';
       });
-      print('[CountdownDialog] Error enviando FE: $e');
+      debugPrint('[CountdownDialog] Error enviando FE: $e');
     }
   }
 
