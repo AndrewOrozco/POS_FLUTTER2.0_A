@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../licencia/presentation/pages/license_page.dart';
 import 'dispositivos_page.dart';
 import 'impresora_page.dart';
 import 'parametrizaciones_page.dart';
@@ -75,6 +76,16 @@ class ConfiguracionPage extends StatelessWidget {
                             subtitulo: 'Configurar IP de la impresora',
                             icono: Icons.print_rounded,
                             onTap: () => _abrirImpresora(context),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildMenuOption(
+                            context,
+                            numero: '6',
+                            titulo: 'LICENCIA DEL EQUIPO',
+                            subtitulo: 'Ver estado y restaurar licencia del POS',
+                            icono: Icons.verified_user_rounded,
+                            onTap: () => _abrirLicencia(context),
+                            color: AppTheme.terpelGray6,
                           ),
                         ],
                       ),
@@ -184,7 +195,9 @@ class ConfiguracionPage extends StatelessWidget {
     required String subtitulo,
     required IconData icono,
     required VoidCallback onTap,
+    Color? color,  // opcional para diferenciar ítems especiales
   }) {
+    final itemColor = color ?? AppTheme.terpeRed;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -211,7 +224,7 @@ class ConfiguracionPage extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: AppTheme.terpeRed.withValues(alpha: 0.1),
+                  color: itemColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
@@ -220,7 +233,7 @@ class ConfiguracionPage extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w900,
-                      color: AppTheme.terpeRed,
+                      color: itemColor,
                     ),
                   ),
                 ),
@@ -302,6 +315,13 @@ class ConfiguracionPage extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const ImpresoraPage()),
+    );
+  }
+
+  void _abrirLicencia(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const TerpelLicensePage(fromSettings: true)),
     );
   }
 }

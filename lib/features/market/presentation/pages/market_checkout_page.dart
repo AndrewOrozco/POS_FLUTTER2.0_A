@@ -944,7 +944,9 @@ class _DialogoFacturacionElectronicaMarketState
 
   void _teclaNumero(String digito) {
     if (_tipoSeleccionado != null &&
-        _idCtrl.text.length >= _tipoSeleccionado!.limiteCaracteres) return;
+        _idCtrl.text.length >= _tipoSeleccionado!.limiteCaracteres) {
+      return;
+    }
     _idCtrl.text += digito;
     _idCtrl.selection =
         TextSelection.collapsed(offset: _idCtrl.text.length);

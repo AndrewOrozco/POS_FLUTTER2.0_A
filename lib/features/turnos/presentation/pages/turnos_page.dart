@@ -1604,7 +1604,14 @@ class _CerrarTurnoWizardState extends State<_CerrarTurnoWizard> {
   @override
   void initState() {
     super.initState();
+    // Listener para redibujaar el campo en tiempo real cuando TecladoTactil escribe
+    _usuarioController.addListener(_onControllerChanged);
+    _passwordController.addListener(_onControllerChanged);
     _inicializar();
+  }
+
+  void _onControllerChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _inicializar() async {
@@ -1835,6 +1842,8 @@ class _CerrarTurnoWizardState extends State<_CerrarTurnoWizard> {
   @override
   void dispose() {
     _rfidTimer?.cancel();
+    _usuarioController.removeListener(_onControllerChanged);
+    _passwordController.removeListener(_onControllerChanged);
     _usuarioController.dispose();
     _passwordController.dispose();
     super.dispose();

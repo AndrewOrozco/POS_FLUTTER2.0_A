@@ -80,8 +80,7 @@ class _SincronizacionPageState extends State<SincronizacionPage> {
           if (res['success'] == true && res['resultados'] != null) {
             for (var r in (res['resultados'] as List)) {
               resultados.add(Map<String, dynamic>.from(r));
-              if (r['estado'] == 'OK') exitosos++;
-              else fallidos++;
+              if (r['estado'] == 'OK') { exitosos++; } else { fallidos++; }
             }
           } else {
             resultados.add({

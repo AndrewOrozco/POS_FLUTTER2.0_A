@@ -551,6 +551,7 @@ class _VentasSinResolverPageState extends State<VentasSinResolverPage> {
       identificadorEquipo: _identificadorEquipo ?? 1,
     );
     
+    if (!mounted) return;
     Navigator.pop(context);
     if (response.success) {
       _mostrarExito(response.message);

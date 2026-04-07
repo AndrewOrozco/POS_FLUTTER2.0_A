@@ -1,8 +1,10 @@
+import '../config/app_env.dart';
+
 class AppConstants {
   // App Info
   static const String appTitle = 'Terpel POS';
   static const String version = '7.0.1';
-  static const String stationName = 'EDS LA JUANA';
+  // stationName y posNumber vienen del backend via EdsProvider
   static const String userName = 'Diego';
   static const String greeting = 'Hola Diego 👋';
 
@@ -24,11 +26,14 @@ class AppConstants {
   // POS Number
   static const int posNumber = 1;
 
-  // Socket.IO / Flask Configuration
-  static const String flaskHost = '127.0.0.1';
-  static const int flaskPort = 5000;
-  
-  // LazoExpress Configuration (Node.js)
-  static const String lazoExpressHost = '127.0.0.1';
-  static const int lazoExpressPort = 8010; // Puerto de LazoExpress
+  // Socket.IO / Flask Configuration (desde .env)
+  static String get flaskHost => AppEnv.hostFlask;
+  static int get flaskPort => AppEnv.portFlask;
+
+  // LazoExpress Configuration (desde .env)
+  static String get lazoExpressHost => AppEnv.hostLazoExpress;
+  static int get lazoExpressPort => AppEnv.portLazoExpress;
+
+  // API Consultas Python FastAPI (desde .env)
+  static String get apiConsultasUrl => AppEnv.urlConsultas;
 }

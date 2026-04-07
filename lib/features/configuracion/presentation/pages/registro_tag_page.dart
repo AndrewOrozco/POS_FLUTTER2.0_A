@@ -416,7 +416,8 @@ class _RegistroTagPageState extends State<RegistroTagPage> {
                           border: Border.all(color: Colors.grey.shade300),
                         ),
                         child: DropdownButtonFormField<String>(
-                          initialValue: _usuarioSeleccionado?['identificacion']?.toString(),
+                          // Usar id (PK único) como valor — identificacion puede tener duplicados en BD
+                          initialValue: _usuarioSeleccionado?['id']?.toString(),
                           isExpanded: true,
                           decoration: InputDecoration(
                             border: InputBorder.none,
@@ -426,12 +427,13 @@ class _RegistroTagPageState extends State<RegistroTagPage> {
                             hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
                           ),
                           items: _usuarios.map((u) {
-                            final id = u['identificacion']?.toString() ?? '';
+                            final dbId = u['id']?.toString() ?? '';
+                            final identificacion = u['identificacion']?.toString() ?? '';
                             final nombre = u['nombre']?.toString() ?? '';
                             return DropdownMenuItem<String>(
-                              value: id,
+                              value: dbId,   // ← id único de BD, nunca duplicado
                               child: Text(
-                                '$id — $nombre',
+                                '$identificacion — $nombre',
                                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -439,7 +441,7 @@ class _RegistroTagPageState extends State<RegistroTagPage> {
                           }).toList(),
                           onChanged: (val) {
                             final u = _usuarios.firstWhere(
-                              (u) => u['identificacion']?.toString() == val,
+                              (u) => u['id']?.toString() == val,
                               orElse: () => {},
                             );
                             if (u.isNotEmpty) _seleccionarUsuario(u);

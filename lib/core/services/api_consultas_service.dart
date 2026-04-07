@@ -2107,4 +2107,69 @@ class ApiConsultasService {
       return false;
     }
   }
+
+  // LICENCIAS ─────────────────────────────────────────────────────────────────
+
+  // EDS ────────────────────────────────────────────────────────────────────────
+
+  /// Obtiene la configuración de la EDS (Estación de Servicio) desde el backend.
+  /// Endpoint: GET /configuracion/eds
+  Future<Map<String, dynamic>?> getConfiguracionEds() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$_baseUrl/configuracion/eds'))
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      debugPrint('[ApiConsultas] getConfiguracionEds status: ${response.statusCode}');
+      return null;
+    } catch (e) {
+      debugPrint('[ApiConsultas] getConfiguracionEds error: $e');
+      return null;
+    }
+  }
+
+  // LICENCIAS ─────────────────────────────────────────────────────────────────
+
+  /// Consulta el estado de licencia del equipo (puede llamarse antes del login).
+  Future<Map<String, dynamic>> getLicenciaStatus() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$_baseUrl/configuracion/licencia'))
+          .timeout(const Duration(seconds: 10));
+      return json.decode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      debugPrint('[License] getLicenciaStatus error: $e');
+      return {'licenciado': false, 'mensaje': 'Error: $e'};
+    }
+  }
+
+  /// Activa la licencia con el codigo numerico de la HO.
+  Future<Map<String, dynamic>> activarLicencia(String code) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/configuracion/activar-licencia'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({'code': code}),
+          )
+          .timeout(const Duration(seconds: 15));
+      return json.decode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      debugPrint('[License] activarLicencia error: $e');
+      return {'exito': false, 'mensaje': 'Error de conexion: $e'};
+    }
+  }
+
+  /// Restaura la licencia del equipo (autorizado=N) para re-activar.
+  Future<void> restaurarLicencia() async {
+    try {
+      await http
+          .post(Uri.parse('$_baseUrl/configuracion/restaurar-licencia'))
+          .timeout(const Duration(seconds: 10));
+    } catch (e) {
+      debugPrint('[License] restaurarLicencia error: $e');
+    }
+  }
 }
