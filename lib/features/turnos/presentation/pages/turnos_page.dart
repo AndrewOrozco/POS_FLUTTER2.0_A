@@ -515,9 +515,17 @@ class _IniciarTurnoWizardState extends State<_IniciarTurnoWizard> {
           _totalizadoresPorSurtidor[surtidor] = resultado['data'] as List<dynamic>;
         } else {
           _surtidorEstado[surtidor] = 'error';
+          
+          // Filtrar posible Mojibake que envía el Core en UTF-8 dañado
+          String msg = (resultado['mensaje'] ?? 'Error').toString()
+              .replaceAll('informaciÃ³n', 'información')
+              .replaceAll('comunicaciÃ³n', 'comunicación')
+              .replaceAll('Ã³', 'ó').replaceAll('Ã¡', 'á').replaceAll('Ã©', 'é')
+              .replaceAll('Ã­', 'í').replaceAll('Ãº', 'ú').replaceAll('Ã±', 'ñ');
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Surtidor $surtidor: ${resultado['mensaje'] ?? 'Error'}'),
+              content: Text('Surtidor $surtidor: $msg'),
               backgroundColor: Colors.orange,
             ),
           );

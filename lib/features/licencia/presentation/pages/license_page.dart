@@ -313,9 +313,9 @@ class _TerpelLicensePageState extends State<TerpelLicensePage>
             ),
           ),
           const SizedBox(height: 28),
-          const Text(
-            'Activación\nde Licencia',
-            style: TextStyle(
+          Text(
+            provider.isLicensed ? 'Licencia\nActiva' : 'Activación\nde Licencia',
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 34,
               fontWeight: FontWeight.w800,
@@ -325,7 +325,9 @@ class _TerpelLicensePageState extends State<TerpelLicensePage>
           ),
           const SizedBox(height: 14),
           Text(
-            'Este equipo requiere una licencia activa\npara operar. Ingrese el código numérico\nproporcionado por la HO.',
+            provider.isLicensed
+                ? 'El equipo cuenta con una licencia válida para operar.\nPuede restaurar el POS si desea reconfigurarlo.'
+                : 'Este equipo requiere una licencia activa\npara operar. Ingrese el código numérico\nproporcionado por la HO.',
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.45),
               fontSize: 14,
@@ -505,6 +507,44 @@ class _TerpelLicensePageState extends State<TerpelLicensePage>
 
   // ── Panel derecho ─────────────────────────────────────────────────────────
   Widget _buildRightPanel(BuildContext ctx, LicenseProvider provider) {
+    if (provider.isLicensed) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.greenAccent.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 72),
+            ),
+            const SizedBox(height: 32),
+            const Text(
+              'EQUIPO AUTORIZADO',
+              style: TextStyle(
+                color: Colors.greenAccent,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 3,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'La licencia de este punto de venta se encuentra\nactiva, garantizando la integridad de las\ntransacciones según la HO.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.5),
+                fontSize: 14,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(32, 32, 48, 16),
       child: Column(
@@ -738,7 +778,7 @@ class _TerpelLicensePageState extends State<TerpelLicensePage>
   }
 }
 
-// ── Widget de countdown animado ────────────────────────────────────────────────────────────
+// ── Pantalla de bienvenida premium ────────────────────────────────────────────────────────────
 class _ExitoCountdownWidget extends StatefulWidget {
   final String mensaje;
   final VoidCallback onComplete;
@@ -750,180 +790,139 @@ class _ExitoCountdownWidget extends StatefulWidget {
 
 class _ExitoCountdownWidgetState extends State<_ExitoCountdownWidget>
     with SingleTickerProviderStateMixin {
-  int _seconds = 3;
-  late AnimationController _scaleCtrl;
-  late Animation<double> _scaleAnim;
+  late AnimationController _fadeCtrl;
+  int _messageIndex = 0;
+
+  final List<String> _loadingMessages = [
+    'Licencia activada con éxito',
+    'Sincronizando configuración...',
+    'Descargando maestros e inventarios...',
+    'Preparando entorno de la estación...',
+    'Aplicando políticas de seguridad...',
+    '¡Todo listo!'
+  ];
 
   @override
   void initState() {
     super.initState();
-    _scaleCtrl = AnimationController(
+    _fadeCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
-    _scaleAnim = CurvedAnimation(parent: _scaleCtrl, curve: Curves.elasticOut);
-    _scaleCtrl.forward();
-    _startCountdown();
+    _fadeCtrl.forward();
+    _startWelcomeSequence();
   }
 
-  void _startCountdown() async {
-    for (int i = 3; i >= 0; i--) {
-      await Future.delayed(const Duration(seconds: 1));
+  void _startWelcomeSequence() async {
+    // Cicla a través de los mensajes, dándole unos 1500ms a cada uno.
+    for (int i = 0; i < _loadingMessages.length; i++) {
       if (!mounted) return;
-      setState(() => _seconds = i);
-      if (i > 0) {
-        _scaleCtrl.reset();
-        _scaleCtrl.forward();
-      }
+      setState(() {
+        _messageIndex = i;
+      });
+      _fadeCtrl.forward(from: 0.0);
+      
+      // El último mensaje se muestra más corto antes de saltar
+      final delay = i == _loadingMessages.length - 1 ? 800 : 1800;
+      await Future.delayed(Duration(milliseconds: delay));
     }
+    
     if (mounted) widget.onComplete();
   }
 
   @override
   void dispose() {
-    _scaleCtrl.dispose();
+    _fadeCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final bgGrad = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [
-        const Color(0xFF0A1F18),
-        const Color(0xFF071410),
-        const Color(0xFF050D0B),
-      ],
-    );
     return Scaffold(
+      backgroundColor: AppTheme.terpelGrayDark,
       body: Stack(
         children: [
-          // Fondo verde oscuro
-          Container(decoration: BoxDecoration(gradient: bgGrad)),
-          // Burbuja decorativa
-          Positioned(
-            top: -100, right: -80,
-            child: Container(
-              width: 380, height: 380,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(colors: [
-                  Colors.greenAccent.withValues(alpha: 0.1),
-                  Colors.transparent,
-                ]),
+          // Fondo oscuro premium
+          Container(
+            decoration: const BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment.center,
+                radius: 1.5,
+                colors: [Color(0xFF152A32), Color(0xFF0A1015)],
               ),
             ),
           ),
           Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Ícono check animado
-                ScaleTransition(
-                  scale: _scaleAnim,
-                  child: Container(
-                    width: 130,
-                    height: 130,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(colors: [
-                        Colors.greenAccent.withValues(alpha: 0.25),
-                        Colors.transparent,
-                      ]),
-                      border: Border.all(
-                        color: Colors.greenAccent.withValues(alpha: 0.5),
-                        width: 2,
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.verified_rounded,
-                      color: Colors.greenAccent,
-                      size: 65,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 32),
-                // Título
-                const Text(
-                  '¡LICENCIA ACTIVADA!',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 30,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 2,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  widget.mensaje,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.5),
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 36),
-                // Contador
-                _seconds > 0
-                    ? Column(
-                        children: [
-                          Text(
-                            'Continuando en',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.35),
-                              fontSize: 13,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          ScaleTransition(
-                            scale: _scaleAnim,
-                            child: Text(
-                              '$_seconds',
-                              style: TextStyle(
-                                color: Colors.greenAccent.withValues(alpha: 0.9),
-                                fontSize: 64,
-                                fontWeight: FontWeight.w900,
-                                height: 1,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          // Barra de progreso
-                          SizedBox(
-                            width: 180,
-                            child: LinearProgressIndicator(
-                              value: (_seconds) / 3.0,
-                              backgroundColor: Colors.white.withValues(alpha: 0.08),
-                              color: Colors.greenAccent,
-                              minHeight: 4,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
+            child: FadeTransition(
+              opacity: _fadeCtrl,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_messageIndex == 0 || _messageIndex == _loadingMessages.length - 1)
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.greenAccent.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.greenAccent.withValues(alpha: 0.2),
+                            blurRadius: 40,
+                            spreadRadius: 5,
                           ),
                         ],
-                      )
-                    : Column(
+                      ),
+                      child: const Icon(Icons.verified_rounded, color: Colors.greenAccent, size: 72),
+                    )
+                  else
+                    SizedBox(
+                      width: 80,
+                      height: 80,
+                      child: Stack(
+                        alignment: Alignment.center,
                         children: [
                           const SizedBox(
-                            width: 28,
-                            height: 28,
+                            width: 80,
+                            height: 80,
                             child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: Colors.greenAccent,
+                              strokeWidth: 2,
+                              color: Colors.white24,
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Iniciando el sistema...',
-                            style: TextStyle(
-                              color: Colors.greenAccent.withValues(alpha: 0.7),
-                              fontSize: 13,
-                              letterSpacing: 1,
+                          SizedBox(
+                            width: 60,
+                            height: 60,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 3,
+                              color: AppTheme.terpeRed,
                             ),
                           ),
                         ],
                       ),
-              ],
+                    ),
+                  const SizedBox(height: 48),
+                  Text(
+                    _loadingMessages[_messageIndex],
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (_messageIndex > 0 && _messageIndex < _loadingMessages.length - 1)
+                    Text(
+                      'Por favor, no apague el equipo...',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.4),
+                        fontSize: 13,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ],
