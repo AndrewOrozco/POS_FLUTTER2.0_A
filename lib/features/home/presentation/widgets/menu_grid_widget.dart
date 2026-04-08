@@ -13,6 +13,7 @@ import '../../../market/presentation/pages/market_page.dart';
 import '../../../fidelizacion/presentation/pages/fidelizacion_page.dart';
 import '../../../configuracion/presentation/pages/configuracion_page.dart';
 import '../../../reportes/presentation/pages/reportes_sincronizacion_page.dart';
+import '../../../surtidores/presentation/pages/surtidores_page.dart';
 
 class MenuGridWidget extends StatelessWidget {
   const MenuGridWidget({super.key});
@@ -58,6 +59,12 @@ class MenuGridWidget extends StatelessWidget {
                   icon: Icons.local_gas_station,
                   title: 'Surtidor',
                   iconBgColor: AppTheme.terpeRed,
+                  onTap: () => _verificarTurnoYNavegar(context, 'Surtidores', () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SurtidoresPage()),
+                    );
+                  }),
                 ),
                 _buildMenuItem(
                   context: context,

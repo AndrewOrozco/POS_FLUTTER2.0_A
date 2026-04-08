@@ -1697,18 +1697,19 @@ class _CerrarTurnoWizardState extends State<_CerrarTurnoWizard> {
       }
     }
   }
+  bool _pollRfidActivo = false;
 
   void _iniciarPollRfid() {
-    _rfidTimer?.cancel();
-    _rfidTimer = Timer.periodic(const Duration(seconds: 3), (_) => _hacerPollRfid());
+    _pollRfidActivo = true;
+    _hacerPollRfid();
   }
 
   Future<void> _hacerPollRfid() async {
-    if (_cerrando || _mensajeExito != null) return;
+    if (!_pollRfidActivo || _cerrando || _mensajeExito != null || !mounted) return;
     try {
       final lectura = await _apiService.getLecturaIdentificadorRumbo(cara: 1, tipo: 'turno');
       if (lectura != null && mounted) {
-        _rfidTimer?.cancel();
+        _pollRfidActivo = false;
 
         final cedula = lectura['serial']?.toString() ?? '';
         final pin = lectura['pin']?.toString() ?? '';
@@ -1737,7 +1738,15 @@ class _CerrarTurnoWizardState extends State<_CerrarTurnoWizard> {
           _iniciarPollRfid();
         }
       }
-    } catch (_) {}
+    } catch (_) {
+      // Ignorar errores timeout
+    } finally {
+      if (_pollRfidActivo && mounted) {
+        // Pausa breve antes del siguiente ciclo
+        await Future.delayed(const Duration(seconds: 1));
+        _hacerPollRfid();
+      }
+    }
   }
 
   Future<void> _cerrarTurno({bool fromRFID = false}) async {
@@ -1849,7 +1858,7 @@ class _CerrarTurnoWizardState extends State<_CerrarTurnoWizard> {
 
   @override
   void dispose() {
-    _rfidTimer?.cancel();
+    _pollRfidActivo = false;
     _usuarioController.removeListener(_onControllerChanged);
     _passwordController.removeListener(_onControllerChanged);
     _usuarioController.dispose();

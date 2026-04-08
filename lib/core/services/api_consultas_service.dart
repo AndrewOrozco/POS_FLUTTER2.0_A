@@ -1341,8 +1341,7 @@ class ApiConsultasService {
   }
 
   /// Procesar venta de canastilla
-  Future<Map<String, dynamic>> procesarVentaCanastilla(
-      Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> procesarVentaCanastilla(Map<String, dynamic> body) async {
     try {
       final response = await http
           .post(
@@ -1352,10 +1351,252 @@ class ApiConsultasService {
           )
           .timeout(const Duration(seconds: 30));
 
-      return json.decode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
     } catch (e) {
       debugPrint('[ApiConsultas] Error procesarVentaCanastilla: $e');
-      return {'exito': false, 'mensaje': 'Error: $e'};
+      return {'exito': false, 'mensaje': 'Error de conexión: $e'};
+    }
+  }
+
+  // ============================================================
+  //  SURTIDORES
+  // ============================================================
+
+  /// Obtener el estado detallado de las mangueras de los surtidores
+  Future<Map<String, dynamic>> obtenerManguerasSurtidores() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$_baseUrl/surtidores/mangueras'))
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'data': []};
+    } catch (e) {
+      debugPrint('[ApiConsultas] Error obtenerManguerasSurtidores: $e');
+      return {'exito': false, 'data': [], 'mensaje': e.toString()};
+    }
+  }
+
+  /// Aplicar actualización de bloqueos
+  Future<Map<String, dynamic>> aplicarBloqueosSurtidores(List<Map<String, dynamic>> bloqueos) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/surtidores/bloqueo'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'bloqueos': bloqueos}),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      debugPrint('[ApiConsultas] Error aplicarBloqueosSurtidores: $e');
+      return {'exito': false, 'mensaje': e.toString()};
+    }
+  }
+
+  /// Limpiar salto de lectura de una manguera (envía comando al Core Gilbarco)
+  Future<Map<String, dynamic>> arreglarSaltoLecturaSurtidor(int configuracionId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/surtidores/arreglar_salto'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'configuracion_id': configuracionId}),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      debugPrint('[ApiConsultas] Error arreglarSaltoLecturaSurtidor: $e');
+      return {'exito': false, 'mensaje': e.toString()};
+    }
+  }
+
+  /// Crear autorización especial (1=Predeterminado, 2=Calibracion, 3=Consumo Propio)
+  Future<Map<String, dynamic>> crearAutorizacionEspecialSurtidor({
+    required int surtidor,
+    required int cara,
+    required int manguera,
+    required int tipoVenta,
+    int monto = 0,
+    int volumen = 0,
+    int? promotorId,
+  }) async {
+    try {
+      final body = {
+        'surtidor': surtidor,
+        'cara': cara,
+        'manguera': manguera,
+        'tipo_venta': tipoVenta,
+        'monto': monto,
+        'volumen': volumen,
+        if (promotorId != null) 'promotor_id': promotorId,
+      };
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/surtidores/tipo-venta'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      debugPrint('[ApiConsultas] Error crearAutorizacionEspecialSurtidor: $e');
+      return {'exito': false, 'mensaje': e.toString()};
+    }
+  }
+
+  /// Cambiar precio de una manguera particular
+  Future<Map<String, dynamic>> aplicarCambioPrecioSurtidor({
+    required int surtidor,
+    required int cara,
+    required int manguera,
+    required int nuevoPrecio,
+  }) async {
+    try {
+      final body = {
+        'surtidor': surtidor,
+        'cara': cara,
+        'manguera': manguera,
+        'nuevo_precio': nuevoPrecio,
+      };
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/surtidores/cambio-precio'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      debugPrint('[ApiConsultas] Error aplicarCambioPrecioSurtidor: $e');
+      return {'exito': false, 'mensaje': e.toString()};
+    }
+  }
+
+  /// Obtener el historial de remisiones de SAP
+  Future<Map<String, dynamic>> obtenerHistorialRemisionesSurtidor({int registros = 50}) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/surtidores/historial-remisiones?registros=$registros');
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      debugPrint('[ApiConsultas] Error obtenerHistorialRemisionesSurtidor: $e');
+      return {'exito': false, 'mensaje': e.toString()};
+    }
+  }
+
+  /// Verifica si una remisión es válida en SAP (Entrada de Combustible)
+  Future<Map<String, dynamic>> validarRemisionSAP({required String delivery}) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/surtidores/remision/validar?delivery=$delivery');
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      debugPrint('[ApiConsultas] Error validarRemisionSAP: $e');
+      return {'exito': false, 'mensaje': e.toString()};
+    }
+  }
+
+  /// Obtiene los tanques autorizados y productos de un número de remisión
+  Future<Map<String, dynamic>> obtenerTanquesRemision({required String delivery}) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/surtidores/remision/$delivery/tanques');
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      debugPrint('[ApiConsultas] Error obtenerTanquesRemision: $e');
+      return {'exito': false, 'mensaje': e.toString()};
+    }
+  }
+
+  /// Obtiene los tanques y productos disponibles para MODO OFFLINE (Entrada Manual)
+  Future<Map<String, dynamic>> getTanquesYProductosManual() async {
+    try {
+      final uri = Uri.parse('$_baseUrl/surtidores/tanques-y-productos');
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      debugPrint('[ApiConsultas] Error getTanquesYProductosManual: $e');
+      return {'exito': false, 'mensaje': e.toString()};
+    }
+  }
+
+  /// Consulta el aforo de un tanque específico para una altura dada
+  Future<Map<String, dynamic>> getAforoTanque(int tanqueId, double altura) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/surtidores/aforo/$tanqueId?altura=$altura');
+      final response = await http.get(uri).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'volumen': 0.0, 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      debugPrint('[ApiConsultas] Error getAforoTanque: $e');
+      return {'exito': false, 'volumen': 0.0, 'mensaje': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> registrarReceptorCombustible({required Map<String, dynamic> datos}) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/surtidores/recepcion-combustible'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(datos),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      debugPrint('[ApiConsultas] Error registrarReceptorCombustible: $e');
+      return {'exito': false, 'mensaje': e.toString()};
+    }
+  }
+
+  /// Obtiene los registros pendientes de Recepción Combustible
+  Future<Map<String, dynamic>> getRecepcionesPendientes() async {
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/surtidores/recepciones/pendientes')).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return {'exito': false, 'data': [], 'mensaje': 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      debugPrint('[ApiConsultas] Error getRecepcionesPendientes: $e');
+      return {'exito': false, 'data': [], 'mensaje': e.toString()};
     }
   }
 
