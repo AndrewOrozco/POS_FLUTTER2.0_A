@@ -15,7 +15,7 @@ class LazoExpressService {
   Future<EstacionInfo?> getInformacionEstacion() async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/servicios/informacionEstacion'),
+        Uri.parse('${AppConstants.apiConsultasUrl}/configuracion/eds'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -46,7 +46,7 @@ class LazoExpressService {
   Future<EquipoInfo?> getEquipoInfo() async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/web/equipo/info'),
+        Uri.parse('${AppConstants.apiConsultasUrl}/configuracion/equipo/info'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -98,7 +98,7 @@ class LazoExpressService {
   Future<List<PromotorTurno>> getTurnosActivos() async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/api/reportes/informacionTurno'),
+        Uri.parse('${AppConstants.apiConsultasUrl}/turnos/activos'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -107,7 +107,11 @@ class LazoExpressService {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
-        if (json['data'] != null && json['data'] is List) {
+        if (json['turnos'] != null && json['turnos'] is List) {
+          return (json['turnos'] as List)
+              .map((item) => PromotorTurno.fromJson(item))
+              .toList();
+        } else if (json['data'] != null && json['data'] is List) {
           return (json['data'] as List)
               .map((item) => PromotorTurno.fromJson(item))
               .toList();
@@ -248,9 +252,9 @@ class PromotorTurno {
 
   factory PromotorTurno.fromJson(Map<String, dynamic> json) {
     return PromotorTurno(
-      id: _parseInt(json['id'] ?? json['promotor_id']),
-      nombre: json['nombre']?.toString() ?? json['nombrePromotor']?.toString() ?? 'Sin nombre',
-      identificacion: json['identificacion']?.toString(),
+      id: _parseInt(json['id'] ?? json['promotor_id'] ?? json['personas_id']),
+      nombre: json['nombre']?.toString() ?? json['nombrePromotor']?.toString() ?? json['promotor_nombre']?.toString() ?? 'Sin nombre',
+      identificacion: json['identificacion']?.toString() ?? json['promotor_identificacion']?.toString(),
       fechaInicio: json['fecha_inicio'] != null 
           ? DateTime.tryParse(json['fecha_inicio'].toString())
           : null,

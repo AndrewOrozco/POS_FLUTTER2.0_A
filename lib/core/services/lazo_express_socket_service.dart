@@ -31,7 +31,7 @@ class LazoExpressSocketService {
 
   /// Conectar al servidor LazoExpress
   /// Por defecto usa localhost:8010 (donde corre LazoExpress)
-  void connect({String host = 'http://127.0.0.1', int port = 8010}) {
+  void connect({String host = 'http://127.0.0.1', int port = 5010}) {
     if (_socket != null && _isConnected) {
       debugPrint('[LazoExpressSocket] Ya está conectado');
       return;

@@ -16,13 +16,11 @@ export '../models/api_models.dart';
 
 import '../models/api_models.dart';
 import 'package:flutter/foundation.dart';
+import '../constants/app_constants.dart';
 
 /// Servicio para el API de consultas (FastAPI)
 class ApiConsultasService {
-  static const String _host = '127.0.0.1';
-  static const int _port = 8020;
-  
-  String get _baseUrl => 'http://$_host:$_port';
+  String get _baseUrl => AppConstants.apiConsultasUrl;
 
   // ============================================================
   // VENTAS

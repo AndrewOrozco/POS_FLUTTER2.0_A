@@ -1602,6 +1602,7 @@ class _CerrarTurnoWizardState extends State<_CerrarTurnoWizard> {
   // Totalizadores
   List<dynamic> _totalizadoresFinales = [];
   bool _leyendoTotalizadores = true;
+  bool _errorTotalizadores = false;
   String _estadoTotalizadores = 'CONSULTANDO LECTURAS...';
 
   // RFID polling
@@ -1654,6 +1655,7 @@ class _CerrarTurnoWizardState extends State<_CerrarTurnoWizard> {
         if (mounted) {
           setState(() {
             _leyendoTotalizadores = false;
+            _errorTotalizadores = true;
             _estadoTotalizadores = 'SIN SURTIDORES';
           });
         }
@@ -1684,7 +1686,8 @@ class _CerrarTurnoWizardState extends State<_CerrarTurnoWizard> {
         setState(() {
           _totalizadoresFinales = todosTotalizadores;
           _leyendoTotalizadores = false;
-          _estadoTotalizadores = 'LECTURAS OK (${todosTotalizadores.length} registros)';
+          _errorTotalizadores = false;
+          _estadoTotalizadores = 'LECTURAS OK (${todosTotalizadores.length})';
         });
       }
     } catch (e) {
@@ -1692,7 +1695,8 @@ class _CerrarTurnoWizardState extends State<_CerrarTurnoWizard> {
       if (mounted) {
         setState(() {
           _leyendoTotalizadores = false;
-          _estadoTotalizadores = 'ERROR LEYENDO TOTALIZADORES';
+          _errorTotalizadores = true;
+          _estadoTotalizadores = 'ERROR EN LECTURAS (Toque para reintentar)';
         });
       }
     }
@@ -1919,42 +1923,56 @@ class _CerrarTurnoWizardState extends State<_CerrarTurnoWizard> {
           ),
           const Spacer(),
           // Indicador de totalizadores
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: _leyendoTotalizadores
-                  ? Colors.orange.shade50
-                  : Colors.green.shade50,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
+          GestureDetector(
+            onTap: _leyendoTotalizadores ? null : () {
+              if (mounted) {
+                setState(() {
+                  _leyendoTotalizadores = true;
+                  _errorTotalizadores = false;
+                  _estadoTotalizadores = 'CONSULTANDO...';
+                });
+              }
+              _leerTotalizadores();
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
                 color: _leyendoTotalizadores
-                    ? Colors.orange.shade200
-                    : Colors.green.shade200,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_leyendoTotalizadores)
-                  SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange.shade700),
-                  )
-                else
-                  Icon(Icons.check_circle, color: Colors.green.shade600, size: 16),
-                const SizedBox(width: 6),
-                Text(
-                  _estadoTotalizadores,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: _leyendoTotalizadores
-                        ? Colors.orange.shade800
-                        : Colors.green.shade800,
-                  ),
+                    ? Colors.orange.shade50
+                    : (_errorTotalizadores ? Colors.red.shade50 : Colors.green.shade50),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: _leyendoTotalizadores
+                      ? Colors.orange.shade200
+                      : (_errorTotalizadores ? Colors.red.shade200 : Colors.green.shade200),
                 ),
-              ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_leyendoTotalizadores)
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange.shade700),
+                    )
+                  else if (_errorTotalizadores)
+                    Icon(Icons.sync_problem_rounded, color: Colors.red.shade600, size: 16)
+                  else
+                    Icon(Icons.check_circle, color: Colors.green.shade600, size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    _estadoTotalizadores,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: _leyendoTotalizadores
+                          ? Colors.orange.shade800
+                          : (_errorTotalizadores ? Colors.red.shade800 : Colors.green.shade800),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
