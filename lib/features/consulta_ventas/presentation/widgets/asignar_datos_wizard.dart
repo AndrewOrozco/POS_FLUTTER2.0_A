@@ -255,8 +255,8 @@ class _AsignarDatosWizardState extends State<AsignarDatosWizard> {
       debugPrint('[AsignarDatos] Error cargando medios existentes: $e');
     }
 
-    // Si GoPass fue rechazado y no hay medios cargados, pre-seleccionar EFECTIVO
-    if (_gopassRechazado && _mediosAgregados.isEmpty) {
+    // Si GoPass o AppTerpel fueron rechazados y no hay medios cargados, pre-seleccionar EFECTIVO
+    if ((_gopassRechazado || _appTerpelRechazado) && _mediosAgregados.isEmpty) {
       try {
         final mediosConEfectivo = await _apiService.getMediosPago(traerEfectivo: true);
         final efectivo = mediosConEfectivo.firstWhere(
@@ -271,7 +271,7 @@ class _AsignarDatosWizardState extends State<AsignarDatosWizard> {
           ));
           _valorPagoController.text = '0';
         });
-        debugPrint('[AsignarDatos] EFECTIVO pre-seleccionado por GoPass rechazado: \$$_totalVenta');
+        debugPrint('[AsignarDatos] EFECTIVO pre-seleccionado por AppTerpel/GoPass rechazado: \$$_totalVenta');
       } catch (e) {
         debugPrint('[AsignarDatos] Error pre-seleccionando EFECTIVO: $e');
       }

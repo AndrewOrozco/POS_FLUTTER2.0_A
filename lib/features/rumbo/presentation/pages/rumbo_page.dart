@@ -1203,14 +1203,14 @@ class _RumboPageState extends State<RumboPage> {
             ),
           ],
           const SizedBox(height: 14),
-          Row(
+          Wrap(
+            spacing: 12, // Equivalent to the padding
+            runSpacing: 12,
             children: _mangueras.map((m) {
               final seleccionada = _mangueraSeleccionada?.manguera == m.manguera &&
                   _mangueraSeleccionada?.cara == m.cara;
               final esUrea = m.esUrea;
-              return Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: GestureDetector(
+              return GestureDetector(
                   onTap: m.bloqueado
                       ? null
                       : () {
@@ -1267,8 +1267,7 @@ class _RumboPageState extends State<RumboPage> {
                       ],
                     ),
                   ),
-                ),
-              );
+                );
             }).toList(),
           ),
         ],

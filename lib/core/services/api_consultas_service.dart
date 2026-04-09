@@ -2261,6 +2261,148 @@ class ApiConsultasService {
   }
 
   // ============================================================
+  // VENTA MANUAL (CONTINGENCIA)
+  // ============================================================
+
+  /// Obtiene el catálogo completo de Caras, Mangueras, y Precios.
+  /// Llama a /venta_manual/precios-mangueras
+  Future<Map<String, dynamic>> getPreciosMangueras() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/venta_manual/precios-mangueras'),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+      return {'exito': false, 'caras': {}};
+    } catch (e) {
+      debugPrint('[ApiConsultas] Error getPreciosMangueras: $e');
+      return {'exito': false, 'caras': {}, 'error': e.toString()};
+    }
+  }
+
+  /// Registra la venta manual en contingencia.
+  Future<Map<String, dynamic>> registrarVentaManual({
+    required String consecutivo,
+    required int cara,
+    required int manguera,
+    required int productoId,
+    required String fecha,
+    required String hora,
+    required double precioGalon,
+    required double volumenGalones,
+    required double valorTotal,
+    required int promotorId,
+    required int supervisorId,
+  }) async {
+    try {
+      final body = {
+        'consecutivo': consecutivo,
+        'cara': cara,
+        'manguera': manguera,
+        'producto_id': productoId,
+        'fecha': fecha,
+        'hora': hora,
+        'precio_galon': precioGalon,
+        'volumen_galones': volumenGalones,
+        'valor_total': valorTotal,
+        'promotor_id': promotorId,
+        'supervisor_id': supervisorId,
+        'contingencia': true,
+      };
+
+      debugPrint('[ApiConsultas] POST venta_manual/registrar: $body');
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/venta_manual/registrar'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 15));
+
+      final data = json.decode(response.body);
+      if (response.statusCode == 200) {
+        return data;
+      }
+      return {'exito': false, 'mensaje': data['detail'] ?? 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      debugPrint('[ApiConsultas] Error registrarVentaManual: $e');
+      return {'exito': false, 'mensaje': 'Error de conexión: $e'};
+    }
+  }
+
+  // ============================================================
+  // ANULACIONES
+  // ============================================================
+
+  /// Consulta las ventas habilitadas para ser anuladas en un rango de fechas.
+  Future<Map<String, dynamic>> consultarVentasAnulables(String fechaInicio, String fechaFin) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/anulaciones/consultar?fecha_inicio=$fechaInicio&fecha_fin=$fechaFin'),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+      return {'exito': false, 'data': []};
+    } catch (e) {
+      debugPrint('[ApiConsultas] Error consultarVentasAnulables: $e');
+      return {'exito': false, 'data': [], 'error': e.toString()};
+    }
+  }
+
+  /// Obtiene los motivos válidos de anulación.
+  Future<List<dynamic>> getMotivosAnulacion() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/anulaciones/motivos'),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['motivos'] as List<dynamic>;
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[ApiConsultas] Error getMotivosAnulacion: $e');
+      return [];
+    }
+  }
+
+  /// Ejecuta la anulación (Reverso) de una factura.
+  Future<Map<String, dynamic>> ejecutarAnulacion({
+    required int ventaId,
+    required int supervisorId,
+    required int motivoCodigo,
+    required int promotorId,
+  }) async {
+    try {
+      final body = {
+        'venta_id': ventaId,
+        'supervisor_id': supervisorId,
+        'motivo_codigo': motivoCodigo,
+        'promotor_id': promotorId,
+      };
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/anulaciones/ejecutar'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 15));
+
+      final data = json.decode(response.body);
+      if (response.statusCode == 200) {
+        return data;
+      }
+      return {'exito': false, 'mensaje': data['detail'] ?? 'Error HTTP ${response.statusCode}'};
+    } catch (e) {
+      debugPrint('[ApiConsultas] Error ejecutarAnulacion: $e');
+      return {'exito': false, 'mensaje': 'Error de conexión: $e'};
+    }
+  }
+
+  // ============================================================
   // SINCRONIZACIÓN
   // ============================================================
 

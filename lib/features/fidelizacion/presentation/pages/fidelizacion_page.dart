@@ -26,6 +26,7 @@ class _FidelizacionPageState extends State<FidelizacionPage>
   // ── Consulta de Cliente ──
   final TextEditingController _cedulaCtrl = TextEditingController();
   bool _buscandoCliente = false;
+  bool _mostrarTecladoCedula = false;
   Map<String, dynamic>? _clienteEncontrado;
   String? _errorCliente;
 
@@ -47,6 +48,7 @@ class _FidelizacionPageState extends State<FidelizacionPage>
   // ── Validación Bono ──
   final TextEditingController _bonoCodigoCtrl = TextEditingController();
   final TextEditingController _bonoValorCtrl = TextEditingController();
+  TextEditingController? _tecladoBonoCtrl;
   bool _validandoBono = false;
   Map<String, dynamic>? _bonoResultado;
 
@@ -73,8 +75,8 @@ class _FidelizacionPageState extends State<FidelizacionPage>
 
   @override
   void dispose() {
-    _expireTimer?.cancel();
     _staggerController.dispose();
+    _expireTimer?.cancel();
     _cedulaCtrl.dispose();
     _bonoCodigoCtrl.dispose();
     _bonoValorCtrl.dispose();
@@ -144,6 +146,7 @@ class _FidelizacionPageState extends State<FidelizacionPage>
 
     setState(() {
       _validandoBono = true;
+      _tecladoBonoCtrl = null;
       _bonoResultado = null;
     });
 
@@ -170,6 +173,7 @@ class _FidelizacionPageState extends State<FidelizacionPage>
 
     setState(() {
       _buscandoCliente = true;
+      _mostrarTecladoCedula = false;
       _clienteEncontrado = null;
       _errorCliente = null;
     });
@@ -922,12 +926,16 @@ class _FidelizacionPageState extends State<FidelizacionPage>
   // ═══════════════════════════════════════════════════════════
 
   Widget _buildConsultaCliente() {
-    return Container(
-      margin: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Título del panel
+    return GestureDetector(
+      onTap: () {
+        if (_mostrarTecladoCedula) setState(() => _mostrarTecladoCedula = false);
+      },
+      child: Container(
+        margin: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Título del panel
           _buildPanelHeader(
             icon: Icons.person_search_rounded,
             title: 'Consulta de Cliente',
@@ -950,7 +958,10 @@ class _FidelizacionPageState extends State<FidelizacionPage>
                   ),
                   child: TextField(
                     controller: _cedulaCtrl,
-                    keyboardType: TextInputType.number,
+                    keyboardType: TextInputType.none, // Prevent system keyboard
+                    onTap: () {
+                      if (!_mostrarTecladoCedula) setState(() => _mostrarTecladoCedula = true);
+                    },
                     style: const TextStyle(
                         fontSize: 18, fontWeight: FontWeight.w600),
                     decoration: InputDecoration(
@@ -996,27 +1007,36 @@ class _FidelizacionPageState extends State<FidelizacionPage>
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          // Teclado numérico
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04), blurRadius: 8),
-              ],
-            ),
-            child: TecladoTactil(controller: _cedulaCtrl, soloNumeros: true),
-          ),
           const SizedBox(height: 20),
           // Resultado
           Expanded(child: _buildResultadoCliente()),
+          // Teclado numérico Docked at bottom
+          if (_mostrarTecladoCedula) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 16, offset: const Offset(0, -4)),
+                ],
+              ),
+              child: Center(
+                child: TecladoTactil(
+                  controller: _cedulaCtrl, 
+                  soloNumeros: true,
+                  height: 220,
+                  colorTema: const Color(0xFF1976D2),
+                ),
+              ),
+            ),
+          ]
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildResultadoCliente() {
     if (_buscandoCliente) {
@@ -1613,18 +1633,26 @@ class _FidelizacionPageState extends State<FidelizacionPage>
   // ═══════════════════════════════════════════════════════════
 
   Widget _buildValidacionBono() {
-    return Container(
-      margin: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildPanelHeader(
-            icon: Icons.confirmation_num_rounded,
-            title: 'Validación de Bono',
-            color: const Color(0xFF7B1FA2),
-          ),
-          const SizedBox(height: 20),
-          // Resultado
+    return GestureDetector(
+      onTap: () {
+        if (_tecladoBonoCtrl != null) setState(() => _tecladoBonoCtrl = null);
+      },
+      child: Container(
+        margin: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildPanelHeader(
+              icon: Icons.confirmation_num_rounded,
+              title: 'Validación de Bono',
+              color: const Color(0xFF7B1FA2),
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // Resultado
           if (_bonoResultado != null)
             Container(
               margin: const EdgeInsets.only(bottom: 16),
@@ -1703,6 +1731,12 @@ class _FidelizacionPageState extends State<FidelizacionPage>
                 const SizedBox(height: 8),
                 TextField(
                   controller: _bonoCodigoCtrl,
+                  keyboardType: TextInputType.none,
+                  onTap: () {
+                    if (_tecladoBonoCtrl != _bonoCodigoCtrl) {
+                      setState(() => _tecladoBonoCtrl = _bonoCodigoCtrl);
+                    }
+                  },
                   decoration: InputDecoration(
                     hintText: 'Ingrese el código del bono (mín. 6 dígitos)',
                     prefixIcon: const Icon(Icons.qr_code_rounded,
@@ -1730,7 +1764,12 @@ class _FidelizacionPageState extends State<FidelizacionPage>
                 const SizedBox(height: 8),
                 TextField(
                   controller: _bonoValorCtrl,
-                  keyboardType: TextInputType.number,
+                  keyboardType: TextInputType.none,
+                  onTap: () {
+                    if (_tecladoBonoCtrl != _bonoValorCtrl) {
+                      setState(() => _tecladoBonoCtrl = _bonoValorCtrl);
+                    }
+                  },
                   decoration: InputDecoration(
                     hintText: 'Valor en pesos (opcional)',
                     prefixIcon: const Icon(Icons.attach_money_rounded,
@@ -1777,9 +1816,35 @@ class _FidelizacionPageState extends State<FidelizacionPage>
               ],
             ),
           ),
+          ],
+         ),
+        ),
+       ),
+       if (_tecladoBonoCtrl != null) ...[
+         const SizedBox(height: 12),
+         Container(
+           padding: const EdgeInsets.all(12),
+           decoration: BoxDecoration(
+             color: Colors.white,
+             borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+             boxShadow: [
+               BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 16, offset: const Offset(0, -4)),
+             ],
+           ),
+           child: Center(
+             child: TecladoTactil(
+               controller: _tecladoBonoCtrl!, 
+               soloNumeros: true,
+               height: 220,
+               colorTema: const Color(0xFF7B1FA2),
+             ),
+           ),
+         ),
+       ]
         ],
       ),
-    );
+    ),
+   );
   }
 
   // ═══════════════════════════════════════════════════════════
