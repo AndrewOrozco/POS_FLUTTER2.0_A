@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../../core/widgets/responsive.dart';
 import '../widgets/opcion_consulta_card.dart';
 import '../widgets/ventas_placeholder_view.dart';
 import 'historial_ventas_page.dart';
@@ -46,8 +47,90 @@ class _ConsultaVentasPageState extends State<ConsultaVentasPage> with SingleTick
     }
   }
 
+  Widget _buildMobileCategoryChips() {
+    const items = [
+      (numero: '1', titulo: 'CONSULTAS', icono: Icons.search),
+      (numero: '2', titulo: 'PREDETERMINAR', icono: Icons.settings_backup_restore),
+      (numero: '3', titulo: 'CONSUMO PROPIO', icono: Icons.local_gas_station),
+      (numero: '4', titulo: 'FAC. ELECTRÓNICA', icono: Icons.receipt),
+      (numero: '5', titulo: 'VENTAS APP TERPEL', icono: Icons.phone_android),
+      (numero: '6', titulo: 'HISTÓRICA', icono: Icons.history),
+      (numero: '7', titulo: 'VENTA MANUAL', icono: Icons.edit_note),
+      (numero: '8', titulo: 'ANULACIONES', icono: Icons.cancel_presentation),
+    ];
+    return Container(
+      height: 52,
+      color: Colors.white,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final item = items[index];
+          final isSelected = _selectedIndex == index;
+          return ChoiceChip(
+            selected: isSelected,
+            label: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(item.icono, size: 16, color: isSelected ? Colors.white : Colors.grey.shade700),
+                const SizedBox(width: 6),
+                Text(
+                  '${item.numero}. ${item.titulo}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    color: isSelected ? Colors.white : Colors.grey.shade800,
+                  ),
+                ),
+              ],
+            ),
+            selectedColor: const Color(0xFFBA0C2F),
+            backgroundColor: Colors.grey.shade100,
+            showCheckmark: false,
+            onSelected: (_) => _onMenuItemSelected(index),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isMobile = Responsive.isMobile(context);
+    if (isMobile) {
+      return Scaffold(
+        backgroundColor: Colors.grey.shade50,
+        appBar: AppBar(
+          backgroundColor: const Color(0xFFBA0C2F),
+          foregroundColor: Colors.white,
+          title: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.shopping_bag, size: 20),
+              SizedBox(width: 8),
+              Text('VENTAS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            ],
+          ),
+          centerTitle: true,
+          elevation: 0,
+        ),
+        body: Column(
+          children: [
+            _buildMobileCategoryChips(),
+            const Divider(height: 1),
+            Expanded(
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: _buildMainContent(),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       body: Row(
@@ -298,6 +381,7 @@ class _ConsultaVentasVista extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = Responsive.isMobile(context);
     return Container(
       color: Colors.white,
       child: SafeArea(
@@ -305,11 +389,11 @@ class _ConsultaVentasVista extends StatelessWidget {
           children: [
             // Header Minimalista Superior
             Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(isMobile ? 14 : 24),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(isMobile ? 8 : 12),
                     decoration: BoxDecoration(
                       color: Colors.red.shade50,
                       borderRadius: BorderRadius.circular(12),
@@ -317,29 +401,31 @@ class _ConsultaVentasVista extends StatelessWidget {
                     child: Icon(
                       Icons.receipt_long_rounded,
                       color: Colors.red.shade700,
-                      size: 32,
+                      size: isMobile ? 24 : 32,
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Centro de Consultas',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF333333),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Centro de Consultas',
+                          style: TextStyle(
+                            fontSize: isMobile ? 18 : 26,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF333333),
+                          ),
                         ),
-                      ),
-                      Text(
-                        'Consulte el historial o las ventas pendientes',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey.shade600,
+                        Text(
+                          'Consulte el historial o las ventas pendientes',
+                          style: TextStyle(
+                            fontSize: isMobile ? 12 : 16,
+                            color: Colors.grey.shade600,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -347,33 +433,51 @@ class _ConsultaVentasVista extends StatelessWidget {
             const Divider(height: 1),
             // Opciones de consulta
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(40),
-                child: Row(
-                  children: [
-                    // Historial de Ventas
-                    Expanded(
-                      child: OpcionConsultaCard(
-                        titulo: 'Historial de Ventas',
-                        subtitulo: 'Consulta todas las ventas realizadas',
-                        icono: Icons.history_rounded,
-                        color: Colors.blue.shade600,
-                        onTap: () => _navegarHistorial(context),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(isMobile ? 16 : 40),
+                child: isMobile
+                    ? Column(
+                        children: [
+                          OpcionConsultaCard(
+                            titulo: 'Historial de Ventas',
+                            subtitulo: 'Consulta todas las ventas realizadas',
+                            icono: Icons.history_rounded,
+                            color: Colors.blue.shade600,
+                            onTap: () => _navegarHistorial(context),
+                          ),
+                          const SizedBox(height: 16),
+                          OpcionConsultaCard(
+                            titulo: 'Ventas sin Resolver',
+                            subtitulo: 'Ventas pendientes de procesar',
+                            icono: Icons.pending_actions_rounded,
+                            color: Colors.orange.shade600,
+                            onTap: () => _navegarSinResolver(context),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: OpcionConsultaCard(
+                              titulo: 'Historial de Ventas',
+                              subtitulo: 'Consulta todas las ventas realizadas',
+                              icono: Icons.history_rounded,
+                              color: Colors.blue.shade600,
+                              onTap: () => _navegarHistorial(context),
+                            ),
+                          ),
+                          const SizedBox(width: 40),
+                          Expanded(
+                            child: OpcionConsultaCard(
+                              titulo: 'Ventas sin Resolver',
+                              subtitulo: 'Ventas pendientes de procesar',
+                              icono: Icons.pending_actions_rounded,
+                              color: Colors.orange.shade600,
+                              onTap: () => _navegarSinResolver(context),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 40),
-                    // Ventas sin Resolver
-                    Expanded(
-                      child: OpcionConsultaCard(
-                        titulo: 'Ventas sin Resolver',
-                        subtitulo: 'Ventas pendientes de procesar',
-                        icono: Icons.pending_actions_rounded,
-                        color: Colors.orange.shade600,
-                        onTap: () => _navegarSinResolver(context),
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ],

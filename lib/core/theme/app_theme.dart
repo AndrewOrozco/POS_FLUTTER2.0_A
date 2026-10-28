@@ -35,9 +35,11 @@ class AppTheme {
   );
 
   static void configureOrientation() {
-    // Configurar orientación horizontal para POS
+    // Permitir orientación vertical en móviles y horizontal en POS de escritorio
     WidgetsFlutterBinding.ensureInitialized();
     SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);

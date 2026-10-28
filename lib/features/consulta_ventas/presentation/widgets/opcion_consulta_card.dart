@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/responsive.dart';
 
 /// Tarjeta de opción para la consulta de ventas
 /// Diseño moderno con hover effect y animaciones
@@ -57,6 +58,7 @@ class _OpcionConsultaCardState extends State<OpcionConsultaCard>
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = Responsive.isMobile(context);
     return MouseRegion(
       onEnter: (_) => _onHover(true),
       onExit: (_) => _onHover(false),
@@ -74,7 +76,7 @@ class _OpcionConsultaCardState extends State<OpcionConsultaCard>
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
               color: _isHovered ? widget.color.withValues(alpha: 0.05) : Colors.white,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(isMobile ? 14 : 20),
               border: Border.all(
                 color: _isHovered ? widget.color : Colors.grey.shade200,
                 width: 2,
@@ -90,14 +92,15 @@ class _OpcionConsultaCardState extends State<OpcionConsultaCard>
               ],
             ),
             child: Padding(
-              padding: const EdgeInsets.all(32),
+              padding: EdgeInsets.all(isMobile ? 16 : 32),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   // Icono grande
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.all(24),
+                    padding: EdgeInsets.all(isMobile ? 12 : 24),
                     decoration: BoxDecoration(
                       color: _isHovered
                           ? widget.color
@@ -115,38 +118,38 @@ class _OpcionConsultaCardState extends State<OpcionConsultaCard>
                     ),
                     child: Icon(
                       widget.icono,
-                      size: 64,
+                      size: isMobile ? 32 : 64,
                       color: _isHovered ? Colors.white : widget.color,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: isMobile ? 10 : 24),
                   // Título
                   Text(
                     widget.titulo,
                     style: TextStyle(
-                      fontSize: 22,
+                      fontSize: isMobile ? 16 : 22,
                       fontWeight: FontWeight.bold,
                       color: _isHovered ? widget.color : const Color(0xFF333333),
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: isMobile ? 4 : 8),
                   // Subtítulo
                   Text(
                     widget.subtitulo,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: isMobile ? 12 : 14,
                       color: Colors.grey.shade600,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: isMobile ? 12 : 24),
                   // Botón de acción
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 16 : 24,
+                      vertical: isMobile ? 8 : 12,
                     ),
                     decoration: BoxDecoration(
                       color: _isHovered ? widget.color : Colors.grey.shade100,
@@ -160,14 +163,14 @@ class _OpcionConsultaCardState extends State<OpcionConsultaCard>
                           style: TextStyle(
                             color: _isHovered ? Colors.white : Colors.grey.shade700,
                             fontWeight: FontWeight.w600,
-                            fontSize: 16,
+                            fontSize: isMobile ? 13 : 16,
                           ),
                         ),
                         const SizedBox(width: 8),
                         Icon(
                           Icons.arrow_forward_rounded,
                           color: _isHovered ? Colors.white : Colors.grey.shade700,
-                          size: 20,
+                          size: isMobile ? 16 : 20,
                         ),
                       ],
                     ),

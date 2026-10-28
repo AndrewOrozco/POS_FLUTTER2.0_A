@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import '../../../../core/theme/app_theme.dart';
@@ -6,8 +7,11 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers/session_provider.dart';
 import '../../../turnos/presentation/pages/turnos_page.dart';
 
+import '../../../../core/widgets/responsive.dart';
+
 class HeaderWidget extends StatefulWidget {
-  const HeaderWidget({super.key});
+  final VoidCallback? onOpenDrawer;
+  const HeaderWidget({super.key, this.onOpenDrawer});
 
   @override
   State<HeaderWidget> createState() => _HeaderWidgetState();
@@ -39,11 +43,16 @@ class _HeaderWidgetState extends State<HeaderWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = Responsive.isMobile(context);
     return Consumer<SessionProvider>(
       builder: (context, session, child) {
         // Determinar turno activo
         final tienePromotor = session.promotoresActivos.isNotEmpty;
         final turnoTexto = tienePromotor ? 'Turno: Activo' : 'Sin Turno';
+
+        if (isMobile) {
+          return _buildMobileHeader(context, session, tienePromotor, turnoTexto);
+        }
 
         return Container(
           width: double.infinity,
@@ -281,4 +290,183 @@ class _HeaderWidgetState extends State<HeaderWidget> {
       },
     );
   }
+
+  Widget _buildMobileHeader(
+    BuildContext context,
+    SessionProvider session,
+    bool tienePromotor,
+    String turnoTexto,
+  ) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+      ),
+      child: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          color: AppTheme.terpeRed,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: SizedBox(
+            height: 54,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+            children: [
+              // Botón hamburguesa para Drawer
+              IconButton(
+                icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 26),
+                tooltip: 'Menú principal',
+                onPressed: () {
+                  if (widget.onOpenDrawer != null) {
+                    widget.onOpenDrawer!();
+                  } else {
+                    Scaffold.of(context).openDrawer();
+                  }
+                },
+              ),
+              // Logo Terpel
+              Container(
+                width: 28,
+                height: 28,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: ClipOval(
+                  child: Image.asset(
+                    'assets/images/Logo.png',
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'terpel',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const Spacer(),
+              // Badge de Turno compacto
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TurnosPage()),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: tienePromotor ? Colors.white : AppTheme.terpelYellow,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: tienePromotor ? Colors.green : AppTheme.terpeRed,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        tienePromotor ? 'Turno ON' : 'Sin Turno',
+                        style: TextStyle(
+                          color: tienePromotor ? const Color(0xFF333333) : AppTheme.terpelDarkRed,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              // Avatar con popup
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'turnos') {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const TurnosPage()));
+                  } else if (value == 'iniciar') {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const TurnosPage(autoIniciar: true)));
+                  } else if (value == 'cerrar') {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const TurnosPage(autoCerrar: true)));
+                  }
+                },
+                offset: const Offset(0, 44),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                color: Colors.white,
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    value: 'turnos',
+                    child: Row(
+                      children: [
+                        Icon(Icons.schedule_rounded, color: Colors.grey.shade700, size: 18),
+                        const SizedBox(width: 8),
+                        const Text('Gestionar Turnos', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(height: 1),
+                  PopupMenuItem(
+                    value: 'iniciar',
+                    child: Row(
+                      children: [
+                        Icon(Icons.play_arrow_rounded, color: Colors.green.shade600, size: 18),
+                        const SizedBox(width: 8),
+                        const Text('Iniciar Turno', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                  ),
+                  if (tienePromotor)
+                    PopupMenuItem(
+                      value: 'cerrar',
+                      child: Row(
+                        children: [
+                          Icon(Icons.stop_rounded, color: AppTheme.terpeRed, size: 18),
+                          const SizedBox(width: 8),
+                          const Text('Cerrar Turno', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                    ),
+                ],
+                child: Container(
+                  width: 30,
+                  height: 30,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white24,
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.person, color: Colors.white, size: 18),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  ),
+);
+  }
 }
+

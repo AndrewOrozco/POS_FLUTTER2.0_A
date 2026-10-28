@@ -23,11 +23,14 @@ class SurtidorCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenW = MediaQuery.of(context).size.width;
+    final isMobile = screenW < 768;
+    final cardWidth = isMobile ? (screenW * 0.88).clamp(280.0, 340.0) : 320.0;
     final tienePlaca = surtidor.placa != null && surtidor.placa!.isNotEmpty;
     final tieneMedioEspecial = surtidor.medioPagoEspecial != null && surtidor.medioPagoEspecial!.isNotEmpty;
     final tieneExtra = tienePlaca || tieneMedioEspecial;
     return Container(
-      width: 320,
+      width: cardWidth,
       height: tieneExtra ? 385 : 340, // Más altura si tiene placa o medio especial asignado
       margin: const EdgeInsets.all(8),
       decoration: BoxDecoration(

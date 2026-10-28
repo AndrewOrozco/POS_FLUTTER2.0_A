@@ -2,9 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:flutter/foundation.dart';
+import '../config/app_env.dart';
 
 /// Servicio singleton para recibir notificaciones del backend Python (8020)
-/// via WebSocket (ws://localhost:8020/ws/notifications).
+/// via WebSocket (ws://host:8020/ws/notifications).
 /// 
 /// Emite notificaciones tipo Steam cuando:
 /// - 7011 falla (facturador caído)
@@ -39,9 +40,9 @@ class NotificationWebSocketService {
   bool get isConnected => _isConnected;
 
   /// Conectar al WebSocket del backend Python (puerto 8020)
-  void connect({String host = '127.0.0.1', int port = 8020}) {
-    _host = host;
-    _port = port;
+  void connect({String? host, int? port}) {
+    _host = host ?? AppEnv.hostConsultas;
+    _port = port ?? AppEnv.portConsultas;
     _doConnect();
   }
 

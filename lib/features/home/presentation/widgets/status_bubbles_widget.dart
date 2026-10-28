@@ -38,24 +38,45 @@ class _StatusBubblesWidgetState extends State<StatusBubblesWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final screenW = MediaQuery.of(context).size.width;
+    final isMobile = screenW < 768;
+
+    final bubblesRow = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Burbuja 0: Número de POS
+        _buildPosNumberBubble(),
+        SizedBox(width: isMobile ? 8 : 15),
+        // Burbuja 1: Money + Check combinados
+        _buildMoneyCheckBubble(),
+        SizedBox(width: isMobile ? 8 : 15),
+        // Burbuja 2: WiFi + Check combinados
+        _buildWifiCheckBubble(),
+        SizedBox(width: isMobile ? 8 : 15),
+        // Burbuja 3: Flask Socket.IO status
+        _buildFlaskStatusBubble(),
+      ],
+    );
+
+    if (isMobile) {
+      return Positioned(
+        bottom: 12,
+        left: 12,
+        right: 12,
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: bubblesRow,
+          ),
+        ),
+      );
+    }
+
     return Positioned(
       bottom: 30,
       left: 130,
-      child: Row(
-        children: [
-          // Burbuja 0: Número de POS
-          _buildPosNumberBubble(),
-          const SizedBox(width: 15),
-          // Burbuja 1: Money + Check combinados
-          _buildMoneyCheckBubble(),
-          const SizedBox(width: 15),
-          // Burbuja 2: WiFi + Check combinados
-          _buildWifiCheckBubble(),
-          const SizedBox(width: 15),
-          // Burbuja 3: Flask Socket.IO status
-          _buildFlaskStatusBubble(),
-        ],
-      ),
+      child: bubblesRow,
     );
   }
 

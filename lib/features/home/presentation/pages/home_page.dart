@@ -19,6 +19,10 @@ import '../../../status_pump/status_pump.dart';
 import '../widgets/medios_pago_bottom_sheet.dart';
 import '../../../status_pump/presentation/pages/gestionar_venta_page.dart';
 import '../../../turnos/presentation/pages/turnos_page.dart';
+import '../../../consulta_ventas/consulta_ventas.dart';
+import '../../../placa/presentation/pages/placa_page.dart';
+import '../../../../core/widgets/responsive.dart';
+import '../widgets/mobile_drawer.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -28,6 +32,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  int _selectedBottomNav = 0;
   StreamSubscription<AppTerpelVentaTerminada>? _appTerpelSubscription;
   StreamSubscription<PaymentNotification>? _paymentWsSubscription;
   StreamSubscription<VentaTerminada>? _ventaTerminadaSubscription;
@@ -397,95 +403,109 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildSinTurnoOverlay(BuildContext context) {
+    final isMobile = Responsive.isMobile(context);
     return Container(
       color: Colors.black.withValues(alpha: 0.55),
       child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 20,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Icon(Icons.local_gas_station_rounded, size: 64, color: Colors.grey.shade400),
-                  Positioned(
-                    right: -6,
-                    bottom: -6,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade700,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2.5),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: isMobile ? 8 : 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: EdgeInsets.all(isMobile ? 16 : 24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(
+                      Icons.local_gas_station_rounded,
+                      size: isMobile ? 44 : 64,
+                      color: Colors.grey.shade400,
+                    ),
+                    Positioned(
+                      right: -4,
+                      bottom: -4,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade700,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: Icon(Icons.lock_rounded, size: isMobile ? 16 : 20, color: Colors.white),
                       ),
-                      child: const Icon(Icons.lock_rounded, size: 20, color: Colors.white),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 12,
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'SURTIDORES BLOQUEADOS',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red.shade800,
+              SizedBox(height: isMobile ? 12 : 20),
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 20 : 32,
+                  vertical: isMobile ? 12 : 16,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 12,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Inicie turno para operar los surtidores',
-                    style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const TurnosPage()),
-                      );
-                    },
-                    icon: const Icon(Icons.play_arrow_rounded),
-                    label: const Text('INICIAR TURNO', style: TextStyle(fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade600,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'SURTIDORES BLOQUEADOS',
+                      style: TextStyle(
+                        fontSize: isMobile ? 16 : 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red.shade800,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 6),
+                    Text(
+                      'Inicie turno para operar los surtidores',
+                      style: TextStyle(fontSize: isMobile ? 12 : 14, color: Colors.grey.shade700),
+                    ),
+                    SizedBox(height: isMobile ? 12 : 16),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const TurnosPage()),
+                        );
+                      },
+                      icon: const Icon(Icons.play_arrow_rounded),
+                      label: const Text('INICIAR TURNO', style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade600,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isMobile ? 20 : 28,
+                          vertical: isMobile ? 10 : 14,
+                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -493,11 +513,17 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = Responsive.isMobile(context);
     return Scaffold(
+      key: _scaffoldKey,
+      drawer: isMobile ? const MobileMenuDrawer() : null,
+      bottomNavigationBar: isMobile ? _buildMobileBottomBar(context) : null,
       body: Column(
         children: [
           // Header
-          const HeaderWidget(),
+          HeaderWidget(
+            onOpenDrawer: isMobile ? () => _scaffoldKey.currentState?.openDrawer() : null,
+          ),
           // Contenido principal
           Expanded(
             child: Container(
@@ -506,8 +532,8 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   Row(
                     children: [
-                      // Barra lateral izquierda
-                      const SidebarWidget(),
+                      // Barra lateral izquierda (solo Desktop / Pantallas anchas)
+                      if (!isMobile) const SidebarWidget(),
                       // Contenido central: logo FIJO + surtidores flotando encima
                       Expanded(
                         flex: 2,
@@ -562,8 +588,8 @@ class _HomePageState extends State<HomePage> {
                           },
                         ),
                       ),
-                      // Panel derecho con botones en grid
-                      const MenuGridWidget(),
+                      // Panel derecho con botones en grid (solo Desktop / Pantallas anchas)
+                      if (!isMobile) const MenuGridWidget(),
                     ],
                   ),
                   // Iconos de estado posicionados independientemente
@@ -575,6 +601,86 @@ class _HomePageState extends State<HomePage> {
           // Banner de ventas en proceso (F.E + Datafono)
           const VentasFEBannerWidget(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMobileBottomBar(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E2228),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+        border: const Border(
+          top: BorderSide(color: Color(0xFF2C323D), width: 1),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: BottomNavigationBar(
+          currentIndex: _selectedBottomNav,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: AppTheme.terpeRed,
+          unselectedItemColor: Colors.white60,
+          selectedFontSize: 11,
+          unselectedFontSize: 10,
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+          onTap: (index) {
+            setState(() => _selectedBottomNav = index);
+            if (index == 0) {
+              // Pista - ya estamos aquí
+            } else if (index == 1) {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ConsultaVentasPage()))
+                  .then((_) => setState(() => _selectedBottomNav = 0));
+            } else if (index == 2) {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const TurnosPage()))
+                  .then((_) => setState(() => _selectedBottomNav = 0));
+            } else if (index == 3) {
+              final session = Provider.of<SessionProvider>(context, listen: false);
+              if (session.promotoresActivos.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Debe abrir un turno primero'), backgroundColor: Colors.red),
+                );
+                setState(() => _selectedBottomNav = 0);
+                return;
+              }
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const PlacaPage()))
+                  .then((_) => setState(() => _selectedBottomNav = 0));
+            } else if (index == 4) {
+              _scaffoldKey.currentState?.openDrawer();
+              setState(() => _selectedBottomNav = 0);
+            }
+          },
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.local_gas_station_rounded),
+              label: 'Pista',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.shopping_bag_rounded),
+              label: 'Ventas',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.schedule_rounded),
+              label: 'Turnos',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.directions_car_rounded),
+              label: 'Placa',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.menu_rounded),
+              label: 'Menú',
+            ),
+          ],
+        ),
       ),
     );
   }

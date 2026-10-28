@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/teclado_tactil.dart';
+import '../../../../core/widgets/responsive.dart';
 import '../../providers/license_provider.dart';
 
 /// Pantalla de activación de licencia — diseño premium Terpel.
@@ -76,6 +77,11 @@ class _TerpelLicensePageState extends State<TerpelLicensePage>
 
   // ── Pantalla principal ────────────────────────────────────────────────────
   Widget _buildMain(BuildContext ctx, LicenseProvider provider) {
+    final isMobile = Responsive.isMobile(ctx);
+    if (isMobile) {
+      return _buildMobileMain(ctx, provider);
+    }
+
     return Scaffold(
       backgroundColor: AppTheme.terpelGrayDark,
       body: Stack(
@@ -101,6 +107,163 @@ class _TerpelLicensePageState extends State<TerpelLicensePage>
                       // Columna derecha — campo + teclado
                       Expanded(flex: 5, child: _buildRightPanel(ctx, provider)),
                     ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileMain(BuildContext ctx, LicenseProvider provider) {
+    return Scaffold(
+      backgroundColor: AppTheme.terpelGrayDark,
+      body: Stack(
+        children: [
+          _buildBackground(),
+          SafeArea(
+            child: Column(
+              children: [
+                _buildTopBar(),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Ícono y título centrado
+                        Center(
+                          child: ScaleTransition(
+                            scale: _pulse,
+                            child: Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: RadialGradient(
+                                  colors: [
+                                    AppTheme.terpelMediumRed.withValues(alpha: 0.25),
+                                    Colors.transparent,
+                                  ],
+                                ),
+                                border: Border.all(
+                                  color: AppTheme.terpelMediumRed.withValues(alpha: 0.4),
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.lock_outline_rounded,
+                                color: AppTheme.terpeRed,
+                                size: 28,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          provider.isLicensed ? 'Licencia Activa' : 'Activación de Licencia',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          provider.isLicensed
+                              ? 'El equipo cuenta con una licencia válida para operar.'
+                              : 'Ingrese el código numérico de la HO.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Fingerprint card
+                        _buildFingerprintCard(provider),
+                        const SizedBox(height: 16),
+
+                        if (provider.isLicensed) ...[
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Colors.greenAccent.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.2)),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 24),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'Equipo autorizado y listo para operar.',
+                                    style: TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.w600, fontSize: 13),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          if (widget.fromSettings) _buildRestaurarBtn(provider),
+                        ] else ...[
+                          // Input display
+                          Text(
+                            'CÓDIGO DE LICENCIA',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.5),
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          _buildCodeDisplay(),
+                          const SizedBox(height: 10),
+                          if (provider.errorActivacion != null)
+                            _buildMensaje(provider.errorActivacion!, isError: true),
+                          if (provider.exitoActivacion != null)
+                            _buildMensaje(provider.exitoActivacion!, isError: false),
+                          const SizedBox(height: 8),
+                          _buildActivarBtn(provider),
+                          const SizedBox(height: 14),
+                          // Teclado numérico adaptable
+                          TecladoTactil(
+                            controller: _codeController,
+                            soloNumeros: true,
+                            height: 200,
+                            colorTema: AppTheme.terpelMediumRed,
+                          ),
+                          if (widget.fromSettings) ...[
+                            const SizedBox(height: 14),
+                            _buildRestaurarBtn(provider),
+                          ],
+                        ],
+                        const SizedBox(height: 20),
+                        // Footer ISO 27001
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.shield_outlined, color: Colors.white.withValues(alpha: 0.2), size: 14),
+                            const SizedBox(width: 6),
+                            Text(
+                              'ISO 27001 — Acceso controlado',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -176,8 +339,9 @@ class _TerpelLicensePageState extends State<TerpelLicensePage>
 
   // ── Barra superior ────────────────────────────────────────────────────────
   Widget _buildTopBar() {
+    final isMobile = Responsive.isMobile(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 14 : 32, vertical: isMobile ? 10 : 14),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.25),
         border: Border(
@@ -191,20 +355,20 @@ class _TerpelLicensePageState extends State<TerpelLicensePage>
             GestureDetector(
               onTap: () => Navigator.of(context).pop(),
               child: Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                 ),
-                child: Icon(Icons.arrow_back_rounded, color: Colors.white.withValues(alpha: 0.7), size: 20),
+                child: Icon(Icons.arrow_back_rounded, color: Colors.white.withValues(alpha: 0.7), size: 18),
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 10),
           ],
           // Logo / marca Terpel
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [AppTheme.terpelMediumRed, AppTheme.terpeRed],
@@ -216,27 +380,29 @@ class _TerpelLicensePageState extends State<TerpelLicensePage>
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w900,
-                fontSize: 16,
-                letterSpacing: 3,
+                fontSize: 14,
+                letterSpacing: 2,
               ),
             ),
           ),
-          const SizedBox(width: 14),
-          Text(
-            'Sistema Punto de Venta',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.45),
-              fontSize: 13,
-              letterSpacing: 0.5,
+          if (!isMobile) ...[
+            const SizedBox(width: 14),
+            Text(
+              'Sistema Punto de Venta',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.45),
+                fontSize: 13,
+                letterSpacing: 0.5,
+              ),
             ),
-          ),
+          ],
           const Spacer(),
           // Badge de estado
           Consumer<LicenseProvider>(
             builder: (_, prov, __) {
               final activo = prov.isLicensed;
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: activo
                       ? Colors.green.withValues(alpha: 0.08)
@@ -259,14 +425,16 @@ class _TerpelLicensePageState extends State<TerpelLicensePage>
                         shape: BoxShape.circle,
                       ),
                     ),
-                    const SizedBox(width: 7),
+                    const SizedBox(width: 6),
                     Text(
-                      activo ? 'LICENCIA ACTIVA' : 'ACTIVACIÓN REQUERIDA',
+                      activo
+                          ? (isMobile ? 'ACTIVA' : 'LICENCIA ACTIVA')
+                          : (isMobile ? 'SIN LICENCIA' : 'ACTIVACIÓN REQUERIDA'),
                       style: TextStyle(
                         color: activo ? Colors.greenAccent : Colors.orange,
-                        fontSize: 11,
+                        fontSize: 10,
                         fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
+                        letterSpacing: 1,
                       ),
                     ),
                   ],
@@ -281,10 +449,11 @@ class _TerpelLicensePageState extends State<TerpelLicensePage>
 
   // ── Panel izquierdo ───────────────────────────────────────────────────────
   Widget _buildLeftPanel(LicenseProvider provider) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(48, 32, 32, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Ícono animado
           ScaleTransition(
@@ -305,7 +474,7 @@ class _TerpelLicensePageState extends State<TerpelLicensePage>
                   width: 1.5,
                 ),
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.lock_outline_rounded,
                 color: AppTheme.terpeRed,
                 size: 44,
@@ -339,9 +508,11 @@ class _TerpelLicensePageState extends State<TerpelLicensePage>
           _buildFingerprintCard(provider),
           const SizedBox(height: 20),
           // Botón Restaurar POS (solo desde Configuración)
-          if (widget.fromSettings)
+          if (widget.fromSettings) ...[
             _buildRestaurarBtn(provider),
-          const Spacer(),
+            const SizedBox(height: 20),
+          ],
+          const SizedBox(height: 24),
           // Footer info
           Row(
             children: [
@@ -509,44 +680,47 @@ class _TerpelLicensePageState extends State<TerpelLicensePage>
   Widget _buildRightPanel(BuildContext ctx, LicenseProvider provider) {
     if (provider.isLicensed) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.greenAccent.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.greenAccent.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 72),
               ),
-              child: const Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 72),
-            ),
-            const SizedBox(height: 32),
-            const Text(
-              'EQUIPO AUTORIZADO',
-              style: TextStyle(
-                color: Colors.greenAccent,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 3,
+              const SizedBox(height: 32),
+              const Text(
+                'EQUIPO AUTORIZADO',
+                style: TextStyle(
+                  color: Colors.greenAccent,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 3,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'La licencia de este punto de venta se encuentra\nactiva, garantizando la integridad de las\ntransacciones según la HO.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.5),
-                fontSize: 14,
-                height: 1.5,
+              const SizedBox(height: 16),
+              Text(
+                'La licencia de este punto de venta se encuentra\nactiva, garantizando la integridad de las\ntransacciones según la HO.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  fontSize: 14,
+                  height: 1.5,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(32, 32, 48, 16),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(32, 24, 48, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -565,27 +739,27 @@ class _TerpelLicensePageState extends State<TerpelLicensePage>
           _buildCodeDisplay(),
           const SizedBox(height: 16),
           // Mensajes de error / éxito
-          if (provider.errorActivacion != null) _buildMensaje(
-            provider.errorActivacion!,
-            isError: true,
-          ),
-          if (provider.exitoActivacion != null) _buildMensaje(
-            provider.exitoActivacion!,
-            isError: false,
-          ),
+          if (provider.errorActivacion != null)
+            _buildMensaje(
+              provider.errorActivacion!,
+              isError: true,
+            ),
+          if (provider.exitoActivacion != null)
+            _buildMensaje(
+              provider.exitoActivacion!,
+              isError: false,
+            ),
           const SizedBox(height: 12),
           // Botón activar
           _buildActivarBtn(provider),
           const SizedBox(height: 16),
           // Teclado numérico
-          Expanded(
-            child: Center(
-              child: TecladoTactil(
-                controller: _codeController,
-                soloNumeros: true,
-                height: 220,
-                colorTema: AppTheme.terpelMediumRed,
-              ),
+          Center(
+            child: TecladoTactil(
+              controller: _codeController,
+              soloNumeros: true,
+              height: 220,
+              colorTema: AppTheme.terpelMediumRed,
             ),
           ),
         ],
