@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/status_pump_provider.dart';
-import 'surtidor_card_widget.dart';
-import 'animated_surtidor_card.dart';
+import 'surtidor_panel_java_widget.dart';
 
-/// Widget que muestra la lista horizontal de surtidores activos
-/// Se actualiza automáticamente cuando llegan eventos de Socket.IO
-class SurtidorListWidget extends StatefulWidget {
+/// Widget que representa la lista y monitoreo de surtidores activos.
+/// Redirige directamente al nuevo componente StatusPump NEW unificado
+/// para garantizar consistencia absoluta en toda la aplicación.
+class SurtidorListWidget extends StatelessWidget {
   final Function(int cara)? onGestionarVenta;
   final Function(int cara)? onMediosPago;
-  /// Caras que ya tienen datos de factura guardados.
   final Set<int> carasGestionadas;
 
   const SurtidorListWidget({
@@ -20,75 +19,17 @@ class SurtidorListWidget extends StatefulWidget {
   });
 
   @override
-  State<SurtidorListWidget> createState() => _SurtidorListWidgetState();
-}
-
-class _SurtidorListWidgetState extends State<SurtidorListWidget> {
-  // Mantiene registro de surtidores que ya fueron animados
-  final Set<int> _animatedSurtidores = {};
-
-  @override
   Widget build(BuildContext context) {
-    return Consumer<StatusPumpProvider>(
-      builder: (context, provider, child) {
-        final surtidores = provider.surtidoresActivos;
-        
-        // Debug: siempre mostrar algo para verificar que funciona
-        debugPrint('[SurtidorListWidget] isConnected: ${provider.isConnected}, surtidores: ${surtidores.length}');
-        
-        if (surtidores.isEmpty) {
-          // Limpiar los animados si no hay surtidores
-          _animatedSurtidores.clear();
-          return const SizedBox.shrink();
-        }
-
-        // Ajustar altura si algún surtidor tiene placa o medio especial asignado
-        final tieneExtra = surtidores.any((s) => 
-          (s.placa != null && s.placa!.isNotEmpty) ||
-          (s.medioPagoEspecial != null && s.medioPagoEspecial!.isNotEmpty));
-        return Container(
-          height: tieneExtra ? 405 : 360,
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            itemCount: surtidores.length,
-            itemBuilder: (context, index) {
-              final surtidor = surtidores[index];
-              final isNew = !_animatedSurtidores.contains(surtidor.cara);
-              
-              // Si es nuevo, marcarlo como animado
-              final gestionada = widget.carasGestionadas.contains(surtidor.cara);
-              
-              if (isNew) {
-                _animatedSurtidores.add(surtidor.cara);
-                return AnimatedSurtidorCard(
-                  key: ValueKey('animated_${surtidor.cara}'),
-                  surtidor: surtidor,
-                  index: index,
-                  onGestionarVenta: gestionada ? null : () => widget.onGestionarVenta?.call(surtidor.cara),
-                  ventaGestionada: gestionada,
-                  onMediosPago: () => widget.onMediosPago?.call(surtidor.cara),
-                );
-              }
-              
-              return SurtidorCardWidget(
-                key: ValueKey('card_${surtidor.cara}'),
-                surtidor: surtidor,
-                onGestionarVenta: gestionada ? null : () => widget.onGestionarVenta?.call(surtidor.cara),
-                ventaGestionada: gestionada,
-                onMediosPago: () => widget.onMediosPago?.call(surtidor.cara),
-              );
-            },
-          ),
-        );
-      },
+    debugPrint('[STATUS_PUMP_AUDIT] Renderizando SurtidorListWidget delegando a SurtidorPanelJavaWidget');
+    return SurtidorPanelJavaWidget(
+      onGestionarVenta: onGestionarVenta,
+      onMediosPago: onMediosPago,
+      carasGestionadas: carasGestionadas,
     );
   }
 }
 
-/// Widget compacto que muestra solo indicadores de surtidores activos
-/// Para usar en la barra de estado o header
+/// Widget compacto para indicadores rápidos
 class SurtidorIndicatorsWidget extends StatelessWidget {
   const SurtidorIndicatorsWidget({super.key});
 
@@ -97,10 +38,7 @@ class SurtidorIndicatorsWidget extends StatelessWidget {
     return Consumer<StatusPumpProvider>(
       builder: (context, provider, child) {
         final surtidores = provider.surtidoresActivos;
-        
-        if (surtidores.isEmpty) {
-          return const SizedBox.shrink();
-        }
+        if (surtidores.isEmpty) return const SizedBox.shrink();
 
         return Row(
           mainAxisSize: MainAxisSize.min,
@@ -118,79 +56,14 @@ class SurtidorIndicatorsWidget extends StatelessWidget {
         color: Colors.green,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.local_gas_station, size: 16, color: Colors.white),
-          const SizedBox(width: 4),
-          Text(
-            'C$cara',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
+      child: Text(
+        'C$cara: $estado',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
       ),
-    );
-  }
-}
-
-/// Widget de estado de conexión Socket.IO
-class SocketConnectionStatusWidget extends StatelessWidget {
-  const SocketConnectionStatusWidget({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<StatusPumpProvider>(
-      builder: (context, provider, child) {
-        final isConnected = provider.isConnected;
-        
-        return Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isConnected ? Colors.green : Colors.red,
-              width: 1.5,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.wifi,
-                size: 20,
-                color: isConnected ? Colors.green : Colors.grey,
-              ),
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: isConnected ? Colors.green : Colors.red,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  isConnected ? Icons.check : Icons.close,
-                  size: 12,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                isConnected ? 'Flask' : 'Sin conexión',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isConnected ? Colors.green : Colors.red,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

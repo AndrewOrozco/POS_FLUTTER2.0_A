@@ -1,6 +1,8 @@
 
 // Domain
 export 'domain/entities/surtidor_estado.dart';
+export 'domain/entities/status_pump_fase.dart';
+export 'domain/entities/combustible_color.dart';
 
 // Presentation - Providers
 export 'presentation/providers/status_pump_provider.dart';
@@ -12,3 +14,4 @@ export 'presentation/pages/status_pump_page.dart';
 export 'presentation/widgets/surtidor_card_widget.dart';
 export 'presentation/widgets/surtidor_list_widget.dart';
 export 'presentation/widgets/animated_surtidor_card.dart';
+export 'presentation/widgets/surtidor_panel_java_widget.dart';

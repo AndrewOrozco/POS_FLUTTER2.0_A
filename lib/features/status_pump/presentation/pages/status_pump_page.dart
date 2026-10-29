@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../providers/status_pump_provider.dart';
-import '../widgets/surtidor_card_widget.dart';
+import '../widgets/surtidor_panel_java_widget.dart';
 import '../../domain/entities/surtidor_estado.dart';
 import '../../../home/presentation/widgets/medios_pago_bottom_sheet.dart';
 import 'gestionar_venta_page.dart';
@@ -67,6 +67,7 @@ class _StatusPumpPageState extends State<StatusPumpPage> {
           }
 
           final surtidores = provider.surtidoresActivos;
+          debugPrint('[STATUS_PUMP_AUDIT] StatusPumpPage Consumer - Surtidores activos: ${surtidores.length}');
 
           // Sin surtidores activos
           if (surtidores.isEmpty) {
@@ -156,27 +157,19 @@ class _StatusPumpPageState extends State<StatusPumpPage> {
     final carasValidas = <int>{};
     for (final entry in _carasGestionadasMonto.entries) {
       final surtidor = surtidores.cast<SurtidorEstado>().where((s) => s.cara == entry.key).firstOrNull;
-      if (surtidor != null && surtidor.monto >= entry.value && surtidor.estado.estaActivo) {
+      if (surtidor != null && surtidor.monto >= entry.value && surtidor.estaActivo) {
         carasValidas.add(entry.key);
       }
     }
     // Limpiar flags de ventas que ya terminaron o reiniciaron
     _carasGestionadasMonto.removeWhere((cara, _) => !carasValidas.contains(cara));
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Wrap(
-        spacing: 16,
-        runSpacing: 16,
-        children: surtidores.map<Widget>((surtidor) {
-          final gestionada = carasValidas.contains(surtidor.cara);
-          return SurtidorCardWidget(
-            surtidor: surtidor,
-            onGestionarVenta: gestionada ? null : () => _onGestionarVenta(surtidor.cara),
-            ventaGestionada: gestionada,
-            onMediosPago: () => _onMediosPago(surtidor.cara),
-          );
-        }).toList(),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: SurtidorPanelJavaWidget(
+        onGestionarVenta: _onGestionarVenta,
+        onMediosPago: _onMediosPago,
+        carasGestionadas: carasValidas,
       ),
     );
   }
@@ -200,6 +193,7 @@ class _StatusPumpPageState extends State<StatusPumpPage> {
             .map((s) => s.monto)
             .firstOrNull ?? 0.0;
         setState(() => _carasGestionadasMonto[cara] = montoActual);
+        provider.marcarVentaGestionada(cara);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Row(

@@ -386,6 +386,7 @@ class _HomePageState extends State<HomePage> {
             .map((s) => s.monto)
             .firstOrNull ?? 0.0;
         setState(() => _carasGestionadasMonto[cara] = montoActual);
+        provider.marcarVentaGestionada(cara);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Row(
@@ -559,6 +560,7 @@ class _HomePageState extends State<HomePage> {
                                       builder: (context) {
                                         // Limpiar caras gestionadas cuando el monto baja (venta nueva)
                                         final provider = context.watch<StatusPumpProvider>();
+                                        debugPrint('[STATUS_PUMP_AUDIT] HomePage Builder - Surtidores activos en Provider: ${provider.surtidoresActivos.length}');
                                         final carasValidas = <int>{};
                                         for (final entry in _carasGestionadasMonto.entries) {
                                           final surtidor = provider.surtidoresActivos
@@ -570,7 +572,7 @@ class _HomePageState extends State<HomePage> {
                                         }
                                         // Limpiar flags de ventas que ya terminaron
                                         _carasGestionadasMonto.removeWhere((cara, _) => !carasValidas.contains(cara));
-                                        return SurtidorListWidget(
+                                        return SurtidorPanelJavaWidget(
                                           onGestionarVenta: _onGestionarVenta,
                                           onMediosPago: _onMediosPago,
                                           carasGestionadas: carasValidas,
