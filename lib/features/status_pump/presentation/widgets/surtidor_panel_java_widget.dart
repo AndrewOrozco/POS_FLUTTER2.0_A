@@ -167,95 +167,12 @@ class _SurtidorPanelJavaWidgetState extends State<SurtidorPanelJavaWidget> {
     SurtidorEstado? surtidorSeleccionado, {
     required bool isHorizontal,
   }) {
-    if (isHorizontal && surtidorSeleccionado != null && surtidorSeleccionado.estaActivo) {
-      // Franja horizontal elegante: Selector (izq), Combustible (centro), Badge (der)
-      final colorProducto = surtidorSeleccionado.colorProducto;
-      return Container(
-        width: double.infinity,
-        color: CombustibleColor.headerDark,
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
-        child: Row(
-          children: [
-            const Text(
-              'CARA',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 10.5,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.5,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: caras.map((c) {
-                return _buildCaraChip(
-                  c,
-                  c == caraSeleccionada,
-                  provider,
-                  isHorizontal: false, // Usa dimensiones confortables
-                );
-              }).toList(),
-            ),
-            const SizedBox(width: 12),
-            // Centro: Identificación del combustible (flexible, nunca desborda la fila)
-            Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-            Icon(Icons.local_gas_station_rounded, size: 18, color: colorProducto),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                surtidorSeleccionado.producto.isNotEmpty
-                    ? '${surtidorSeleccionado.producto.toUpperCase()} • MANGUERA ${surtidorSeleccionado.manguera}'
-                    : 'MANGUERA ${surtidorSeleccionado.manguera}',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                  letterSpacing: 0.3,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (surtidorSeleccionado.placa != null && surtidorSeleccionado.placa!.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  surtidorSeleccionado.placa!,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Derecha: Badge de estado
-            _buildBadgeEstado(surtidorSeleccionado, compact: false),
-          ],
-        ),
-      );
-    }
-
-    // Franja vertical estándar
     return Container(
       width: double.infinity,
       color: CombustibleColor.headerDark,
       padding: EdgeInsets.symmetric(
-        vertical: isHorizontal ? 3 : 5,
-        horizontal: 8,
+        vertical: isHorizontal ? 5 : 6,
+        horizontal: 10,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -264,12 +181,12 @@ class _SurtidorPanelJavaWidgetState extends State<SurtidorPanelJavaWidget> {
             'CARA',
             style: TextStyle(
               color: Colors.white70,
-              fontSize: 10,
+              fontSize: 10.5,
               fontWeight: FontWeight.w900,
               letterSpacing: 1.5,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: caras.map((c) {
@@ -301,21 +218,21 @@ class _SurtidorPanelJavaWidgetState extends State<SurtidorPanelJavaWidget> {
         ? surtidor.colorProducto
         : CombustibleColor.diesel;
 
-    final double chipWidth = isHorizontal ? 38 : 44;
-    final double chipHeight = isHorizontal ? 26 : 30;
-    final double chipFontSize = isHorizontal ? 13 : 15;
+    final double chipWidth = isHorizontal ? 42 : 44;
+    final double chipHeight = isHorizontal ? 28 : 30;
+    final double chipFontSize = isHorizontal ? 13.5 : 15;
 
     return GestureDetector(
       onTap: () => provider.seleccionarCara(cara),
       child: Container(
         width: chipWidth,
         height: chipHeight,
-        margin: const EdgeInsets.symmetric(horizontal: 2.5),
+        margin: const EdgeInsets.symmetric(horizontal: 3),
         decoration: BoxDecoration(
           color: isSelected ? Colors.white : CombustibleColor.idleBg,
           borderRadius: BorderRadius.circular(6),
           border: isSelected
-              ? Border.all(color: colorProducto, width: 2.0)
+              ? Border.all(color: const Color(0xFFFFC107), width: 2.0)
               : (esActivo
                   ? Border.all(color: colorProducto.withValues(alpha: 0.8), width: 1.2)
                   : null),
@@ -343,7 +260,7 @@ class _SurtidorPanelJavaWidgetState extends State<SurtidorPanelJavaWidget> {
                   width: isSelected ? (chipWidth * 0.55) : (chipWidth * 0.45),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? colorProducto
+                        ? const Color(0xFFFFC107)
                         : (esActivo ? colorProducto : Colors.white30),
                     borderRadius: BorderRadius.circular(1),
                   ),
@@ -364,17 +281,17 @@ class _SurtidorPanelJavaWidgetState extends State<SurtidorPanelJavaWidget> {
                   ),
                 ),
               )
-            else if (esDespachando)
+            else if (esDespachando || (isSelected && esActivo))
               Positioned(
                 top: 2,
                 right: 2,
                 child: Container(
-                  width: 5,
-                  height: 5,
+                  width: 6,
+                  height: 6,
                   decoration: BoxDecoration(
-                    color: colorProducto,
+                    color: const Color(0xFF22C55E),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 0.8),
+                    border: Border.all(color: Colors.white, width: 1),
                   ),
                 ),
               ),
@@ -535,105 +452,282 @@ class _SurtidorPanelJavaWidgetState extends State<SurtidorPanelJavaWidget> {
   // ═════════════════════════════════════════════════════════════════════════
 
   Widget _buildDetalleHorizontal(SurtidorEstado surtidor, StatusPumpProvider provider) {
+    final colorProducto = surtidor.colorProducto;
     final esFin = surtidor.esFinDespacho;
     final gestionada = surtidor.gestionaVenta || widget.carasGestionadas.contains(surtidor.cara);
     final habilitarMediosPago = surtidor.permiteMediosPago;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+      padding: const EdgeInsets.fromLTRB(12, 7, 12, 9),
       child: LayoutBuilder(
         builder: (context, c) {
-          // ── ZONA C: TRES MÉTRICAS (misma caja de 50px que en vertical) ──
-          final metricas = Row(
-              children: [
-                Expanded(
-                  child: _buildMetricBox(
-                    titulo: 'PRECIO',
-                    compact: false,
-                    contenido: Text(
-                      '\$ ${_formatMiles(surtidor.precioUnidad)}',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF001333),
-                      ),
-                      maxLines: 1,
+          // ── ZONA IZQUIERDA: IDENTIFICACIÓN + 3 MÉTRICAS ──
+          final infoRow = Row(
+            children: [
+              Icon(
+                Icons.local_gas_station_rounded,
+                size: 20,
+                color: colorProducto,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  surtidor.producto.isNotEmpty
+                      ? '${surtidor.producto.toUpperCase()} • MANGUERA ${surtidor.manguera}'
+                      : 'MANGUERA ${surtidor.manguera}',
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF001333),
+                    letterSpacing: 0.3,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (surtidor.placa != null && surtidor.placa!.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0070D5).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: const Color(0xFF0070D5).withValues(alpha: 0.3)),
+                  ),
+                  child: Text(
+                    surtidor.placa!,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0070D5),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildMetricBox(
-                    titulo: 'IMPORTE',
-                    compact: false,
-                    contenido: esFin
-                        ? Text(
-                            '\$ ${_formatMiles(surtidor.monto)}',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF001333),
-                            ),
-                            maxLines: 1,
-                          )
-                        : _buildSpinner(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildMetricBox(
-                    titulo: 'CANTIDAD (GL)',
-                    compact: false,
-                    contenido: esFin
-                        ? Text(
-                            _formatGalones(surtidor.volumen),
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF001333),
-                            ),
-                            maxLines: 1,
-                          )
-                        : _buildSpinner(),
-                  ),
-                ),
               ],
+              const SizedBox(width: 8),
+              _buildBadgeEstado(surtidor, compact: false),
+            ],
           );
 
-          // ── ZONA D: ACCIONES ──
-          final acciones = _buildBotonesAccion(
-            surtidor, esFin, gestionada, habilitarMediosPago,
-            isHorizontal: true,
+          final metricasRow = Row(
+            children: [
+              Expanded(
+                child: _buildMetricBox(
+                  titulo: 'PRECIO',
+                  compact: false,
+                  contenido: Text(
+                    '\$ ${_formatMiles(surtidor.precioUnidad)}',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF001333),
+                    ),
+                    maxLines: 1,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildMetricBox(
+                  titulo: 'IMPORTE',
+                  compact: false,
+                  contenido: esFin
+                      ? Text(
+                          '\$ ${_formatMiles(surtidor.monto)}',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF001333),
+                          ),
+                          maxLines: 1,
+                        )
+                      : _buildSpinner(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildMetricBox(
+                  titulo: 'CANTIDAD (GL)',
+                  compact: false,
+                  contenido: esFin
+                      ? Text(
+                          _formatGalones(surtidor.volumen),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF001333),
+                          ),
+                          maxLines: 1,
+                        )
+                      : _buildSpinner(),
+                ),
+              ),
+            ],
           );
 
-          // Ancho natural de las acciones (2 botones en despacho, 1 al finalizar)
-          // y ancho mínimo legible de las 3 métricas.
-          final anchoAcciones = esFin ? 220.0 : 316.0;
-          const anchoMinMetricas = 3 * 110.0 + 2 * 8.0;
-          final caben = c.maxWidth >= anchoMinMetricas + 12 + anchoAcciones;
+          final zonaIzquierda = Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              infoRow,
+              const SizedBox(height: 7),
+              metricasRow,
+            ],
+          );
 
-          if (caben) {
+          // ── ZONA DERECHA: ACCIONES ──
+          final zonaDerecha = _buildBotonesAccionHorizontal(
+            surtidor,
+            esFin,
+            gestionada,
+            habilitarMediosPago,
+          );
+
+          // Distribución en dos zonas horizontales (preferida):
+          // En pantallas amplias (>=650): bloque métricas a la izquierda, acciones a la derecha.
+          // En pantallas estrechas (<650): dos filas (métricas arriba, acciones abajo).
+          final cabenDosZonas = c.maxWidth >= 650;
+
+          if (cabenDosZonas) {
+            final anchoAcciones = (c.maxWidth * 0.28).clamp(160.0, 210.0);
             return Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Expanded(child: metricas),
+                Expanded(child: zonaIzquierda),
                 const SizedBox(width: 12),
-                SizedBox(width: anchoAcciones, child: acciones),
+                SizedBox(
+                  width: anchoAcciones,
+                  child: zonaDerecha,
+                ),
               ],
             );
           }
 
-          // Si no caben con holgura: dos filas, como en vertical.
+          // Alternativa en dos filas para pantallas muy angostas
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              metricas,
+              zonaIzquierda,
               const SizedBox(height: 8),
-              acciones,
+              zonaDerecha,
             ],
           );
         },
       ),
+    );
+  }
+
+  Widget _buildBotonesAccionHorizontal(
+    SurtidorEstado surtidor,
+    bool esFin,
+    bool gestionada,
+    bool habilitarMediosPago,
+  ) {
+    if (esFin) {
+      if (gestionada) {
+        return SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: ElevatedButton.icon(
+            onPressed: null,
+            icon: const Icon(Icons.check_circle_outline, size: 17, color: Color(0xFF646E78)),
+            label: const Text(
+              'Datos guardados',
+              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w900, color: Color(0xFF646E78)),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: CombustibleColor.botonDisabledBg,
+              disabledBackgroundColor: CombustibleColor.botonDisabledBg,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              elevation: 0,
+            ),
+          ),
+        );
+      }
+
+      // Venta terminada NO gestionada -> Botón "Asignar datos"
+      return SizedBox(
+        width: double.infinity,
+        height: 50,
+        child: ElevatedButton.icon(
+          onPressed: () => widget.onGestionarVenta?.call(surtidor.cara),
+          icon: const Icon(Icons.volunteer_activism_outlined, size: 18, color: Color(0xFF1E293B)),
+          label: const Text(
+            'Asignar datos',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFE2E8F0),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            elevation: 1,
+          ),
+        ),
+      );
+    }
+
+    // Modo Despacho: 2 botones apilados verticalmente
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: double.infinity,
+          height: 38,
+          child: ElevatedButton.icon(
+            onPressed: gestionada ? null : () => widget.onGestionarVenta?.call(surtidor.cara),
+            icon: Icon(
+              gestionada ? Icons.check_circle : Icons.volunteer_activism_outlined,
+              size: 16,
+              color: Colors.white,
+            ),
+            label: Text(
+              gestionada ? 'Datos guardados' : 'Gestionar venta',
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: gestionada ? Colors.green.shade700 : CombustibleColor.botonAccionBg,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              elevation: 1,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        SizedBox(
+          width: double.infinity,
+          height: 38,
+          child: ElevatedButton.icon(
+            onPressed: habilitarMediosPago ? () => widget.onMediosPago?.call(surtidor.cara) : null,
+            icon: const Icon(Icons.credit_card_outlined, size: 16, color: Colors.white),
+            label: const Text(
+              'Medios de Pago',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: CombustibleColor.botonAccionBg,
+              disabledBackgroundColor: CombustibleColor.botonDisabledBg,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              elevation: 1,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -692,8 +786,8 @@ class _SurtidorPanelJavaWidgetState extends State<SurtidorPanelJavaWidget> {
         width: size,
         height: size,
         child: const CircularProgressIndicator(
-          strokeWidth: 2.0,
-          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0070D5)),
+          strokeWidth: 2.2,
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE31B23)),
         ),
       ),
     );
